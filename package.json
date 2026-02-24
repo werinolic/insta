@@ -10,6 +10,9 @@
     "test": "turbo test",
     "lint": "turbo lint"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["sharp", "bcryptjs"]
+  },
   "devDependencies": {
     "turbo": "latest",
     "typescript": "^5.4.0",
