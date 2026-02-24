@@ -1,7 +1,19 @@
 import { z } from 'zod';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { db, notifications, users } from '@repo/db';
 import { router, protectedProcedure } from '../trpc';
+import { registerNotificationEmitter } from '../lib/notifications';
+import type { NotificationPayload } from '../lib/notifications';
+
+// In-memory SSE subscriber map: userId → set of listeners
+const notifSubscribers = new Map<string, Set<(n: NotificationPayload) => void>>();
+
+function emitNotification(recipientId: string, payload: NotificationPayload) {
+  notifSubscribers.get(recipientId)?.forEach((fn) => fn(payload));
+}
+
+// Wire emitter into the shared lib so createNotification() pushes via SSE
+registerNotificationEmitter(emitNotification);
 
 export const notificationsRouter = router({
   list: protectedProcedure
@@ -37,12 +49,12 @@ export const notificationsRouter = router({
     }),
 
   unreadCount: protectedProcedure.query(async ({ ctx }) => {
-    const rows = await db
-      .select({ id: notifications.id })
+    const [row] = await db
+      .select({ count: sql<number>`count(*)` })
       .from(notifications)
       .where(and(eq(notifications.recipientId, ctx.userId), eq(notifications.read, false)));
 
-    return { count: rows.length };
+    return { count: Number(row?.count ?? 0) };
   }),
 
   markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
@@ -52,5 +64,35 @@ export const notificationsRouter = router({
       .where(and(eq(notifications.recipientId, ctx.userId), eq(notifications.read, false)));
 
     return { success: true };
+  }),
+
+  subscribe: protectedProcedure.subscription(async function* ({ ctx }) {
+    const queue: NotificationPayload[] = [];
+    let resolve: (() => void) | null = null;
+
+    const handler = (payload: NotificationPayload) => {
+      queue.push(payload);
+      resolve?.();
+    };
+
+    if (!notifSubscribers.has(ctx.userId)) {
+      notifSubscribers.set(ctx.userId, new Set());
+    }
+    notifSubscribers.get(ctx.userId)!.add(handler);
+
+    try {
+      while (true) {
+        if (queue.length > 0) {
+          yield queue.shift()!;
+        } else {
+          await new Promise<void>((r) => {
+            resolve = r;
+          });
+          resolve = null;
+        }
+      }
+    } finally {
+      notifSubscribers.get(ctx.userId)?.delete(handler);
+    }
   }),
 });
