@@ -7,12 +7,12 @@
 - [x] Copilot instructions + prompt files
 - [x] CLAUDE.md
 
-## Phase 1: Foundation
-- [ ] Monorepo setup (Turborepo + pnpm)
-- [ ] packages/db: Drizzle schema
-- [ ] packages/shared: Zod schemas + types
-- [ ] apps/api: Bun + Fastify + tRPC setup
-- [ ] Auth: Lucia v3
+## Phase 1: Foundation ✅
+- [x] Monorepo setup (Turborepo + pnpm)
+- [x] packages/db: Drizzle schema + pg client
+- [x] packages/shared: Zod schemas + types
+- [x] apps/api: Bun + Fastify + tRPC setup
+- [x] Auth: register, login, logout, me, updateProfile, changePassword (bcryptjs + jose JWT)
 
 ## Phase 2: Core Features
 - [ ] File upload: MinIO + presigned URLs
