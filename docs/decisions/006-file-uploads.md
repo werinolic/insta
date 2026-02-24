@@ -11,7 +11,7 @@ and generate thumbnails/resized variants.
 
 ### Upload flow
 1. Client calls `upload.getPresignedUrl` tRPC procedure with `{ filename, contentType, size }`
-2. API validates the request (type: JPEG/PNG/WebP, size ≤ 10MB) and generates a
+2. API validates the request (type: JPEG/PNG/HEIC, size ≤ 30MB) and generates a
    short-lived MinIO presigned PUT URL (15 min expiry)
 3. Client uploads the file **directly to MinIO** — the API server never handles binary data
 4. Client calls `posts.create` with the MinIO object key; API confirms the object
@@ -20,7 +20,7 @@ and generate thumbnails/resized variants.
 ### Image processing (synchronous)
 On `posts.create`, the API uses **sharp** to:
 - Generate a thumbnail variant (150×150, cropped)
-- Generate a medium variant (750px wide, aspect-preserved)
+- Generate a medium variant (600px wide, aspect-preserved)
 - Write both back to MinIO under derived keys (`{key}_thumb`, `{key}_medium`)
 - Store all three URLs in `post_media` (url, thumbnailUrl, mediumUrl)
 
