@@ -1,5 +1,6 @@
 import '@fastify/cookie';
 import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
 import { eq, or } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { db, users, sessions } from '@repo/db';
@@ -138,5 +139,52 @@ export const authRouter = router({
       await db.delete(sessions).where(eq(sessions.userId, ctx.userId));
 
       return { success: true };
+    }),
+
+  changeUsername: protectedProcedure
+    .input(
+      z.object({
+        username: z
+          .string()
+          .min(3)
+          .max(30)
+          .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers and underscores'),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const [user] = await db.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
+
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+
+      // Enforce 14-day cooldown
+      if (user.usernameChangedAt) {
+        const daysSinceLast =
+          (Date.now() - user.usernameChangedAt.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceLast < 14) {
+          const daysLeft = Math.ceil(14 - daysSinceLast);
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `You can change your username again in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
+          });
+        }
+      }
+
+      const [existing] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, input.username))
+        .limit(1);
+
+      if (existing) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Username already taken' });
+      }
+
+      const [updated] = await db
+        .update(users)
+        .set({ username: input.username, usernameChangedAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, ctx.userId))
+        .returning();
+
+      return toSafeUser(updated);
     }),
 });
