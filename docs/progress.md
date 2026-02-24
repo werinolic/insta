@@ -14,10 +14,15 @@
 - [x] apps/api: Bun + Fastify + tRPC setup
 - [x] Auth: register, login, logout, me, updateProfile, changePassword (bcryptjs + jose JWT)
 
-## Phase 2: Core Features
-- [ ] File upload: MinIO + presigned URLs
-- [ ] Posts: create, feed, single view
-- [ ] Follow system
+## Phase 2: Core Features ✅
+- [x] File upload: MinIO + presigned URLs + sharp (sync, 150px thumb / 600px medium)
+- [x] Posts: create, feed (cursor), single view, by username, delete
+- [x] Follow system: follow/unfollow, followers/following lists
+- [x] Likes: toggle + notification
+- [x] Comments: create/delete, nested replies, @mention notifications
+- [x] Notifications: list, unread count, mark all read (SSE subscription ready)
+- [x] DMs: conversations (DM + group), messages, WS subscription, typing indicator
+- [x] Auth: changeUsername (14-day cooldown added)
 
 ## Phase 3: Social
 - [ ] Likes + Comments
