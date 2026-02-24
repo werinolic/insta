@@ -11,6 +11,7 @@ export const users = pgTable('users', {
   bio: text('bio'),
   website: text('website'),
   avatarUrl: text('avatar_url'),
+  usernameChangedAt: timestamp('username_changed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -18,7 +19,7 @@ export const users = pgTable('users', {
   uniqueIndex('users_email_idx').on(t.email),
 ]);
 
-// ─── Sessions (better-auth) ───────────────────────────────────────────────────
+// ─── Sessions ─────────────────────────────────────────────────────────────────
 
 export const sessions = pgTable('sessions', {
   id: text('id').primaryKey(),
@@ -93,6 +94,22 @@ export const comments = pgTable('comments', {
 }, (t) => [
   index('comments_post_id_idx').on(t.postId),
   index('comments_user_id_idx').on(t.userId),
+]);
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export const notifications = pgTable('notifications', {
+  id: text('id').primaryKey(),
+  recipientId: text('recipient_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  actorId: text('actor_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // like | comment | follow | mention | message
+  postId: text('post_id').references(() => posts.id, { onDelete: 'cascade' }),
+  commentId: text('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
+  read: boolean('read').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('notifications_recipient_id_idx').on(t.recipientId),
+  index('notifications_created_at_idx').on(t.createdAt),
 ]);
 
 // ─── Conversations ────────────────────────────────────────────────────────────
