@@ -126,6 +126,10 @@
 - [x] Read receipts "Seen ✓✓" in web ChatWindow — shown under last outgoing message the other user has read
 - [x] Read receipts "Seen ✓✓" in mobile chat screen — same logic
 
+## Phase 11: Final Spec Gaps ✅
+- [x] Mobile photo reordering in new post screen — ‹ ✕ › controls on each thumbnail
+- [x] Notification deduplication — skip if identical notif (actor+recipient+type+post) created within 1 hour
+
 ## Blockers
 - none
 

@@ -27,6 +27,20 @@ export default function NewPostScreen() {
     onError: (err) => Alert.alert('Error', err.message),
   });
 
+  function moveItem(idx: number, dir: -1 | 1) {
+    const next = idx + dir;
+    if (next < 0 || next >= media.length) return;
+    setMedia((prev) => {
+      const arr = [...prev];
+      [arr[idx], arr[next]] = [arr[next], arr[idx]];
+      return arr;
+    });
+  }
+
+  function removeItem(idx: number) {
+    setMedia((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   async function handlePick() {
     const assets = await pickImages();
     if (!assets) return;
@@ -85,6 +99,8 @@ export default function NewPostScreen() {
             {media.map((m, i) => (
               <View key={i} style={styles.thumbWrap}>
                 <Image source={{ uri: m.uri }} style={styles.thumb} />
+
+                {/* Upload status overlay */}
                 {m.uploading && (
                   <View style={styles.overlay}>
                     <Text style={styles.overlayText}>↑</Text>
@@ -95,6 +111,27 @@ export default function NewPostScreen() {
                     <Text style={styles.overlayText}>✗</Text>
                   </View>
                 )}
+
+                {/* Reorder / remove controls */}
+                <View style={styles.thumbControls}>
+                  <TouchableOpacity
+                    style={[styles.thumbBtn, i === 0 && styles.thumbBtnDisabled]}
+                    onPress={() => moveItem(i, -1)}
+                    disabled={i === 0}
+                  >
+                    <Text style={styles.thumbBtnText}>‹</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.thumbBtn} onPress={() => removeItem(i)}>
+                    <Text style={styles.thumbBtnText}>✕</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.thumbBtn, i === media.length - 1 && styles.thumbBtnDisabled]}
+                    onPress={() => moveItem(i, 1)}
+                    disabled={i === media.length - 1}
+                  >
+                    <Text style={styles.thumbBtnText}>›</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </ScrollView>
@@ -135,6 +172,10 @@ const styles = StyleSheet.create({
   thumb: { width: 100, height: 100, borderRadius: 6 },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
   overlayText: { color: '#fff', fontSize: 22 },
+  thumbControls: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.45)', borderBottomLeftRadius: 6, borderBottomRightRadius: 6 },
+  thumbBtn: { flex: 1, alignItems: 'center', paddingVertical: 3 },
+  thumbBtnDisabled: { opacity: 0.3 },
+  thumbBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   changeBtn: { marginBottom: 16 },
   changeBtnText: { color: '#0095f6', fontSize: 14 },
   captionInput: { borderWidth: 1, borderColor: '#dbdbdb', borderRadius: 6, padding: 12, minHeight: 80, textAlignVertical: 'top', fontSize: 15, marginBottom: 20 },

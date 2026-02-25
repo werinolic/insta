@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db, notifications, users } from '@repo/db';
 
 export type NotificationType = 'like' | 'comment' | 'follow' | 'mention' | 'message';
@@ -34,6 +34,24 @@ export function registerNotificationEmitter(
 
 export async function createNotification(input: CreateNotificationInput): Promise<void> {
   if (input.recipientId === input.actorId) return;
+
+  // Deduplication: skip if an identical notification was already created within the last hour
+  // (e.g. like → unlike → like again should not spam the recipient)
+  const [existing] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.recipientId, input.recipientId),
+        eq(notifications.actorId, input.actorId),
+        eq(notifications.type, input.type),
+        input.postId ? eq(notifications.postId, input.postId) : isNull(notifications.postId),
+        sql`${notifications.createdAt} > now() - interval '1 hour'`,
+      ),
+    )
+    .limit(1);
+
+  if (existing) return;
 
   const id = crypto.randomUUID();
 
