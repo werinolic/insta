@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { eq, and, desc, lt } from 'drizzle-orm';
+import { eq, and, desc, lt, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { db, messages, conversationMembers, messageReads, conversations, users } from '@repo/db';
 import { router, protectedProcedure } from '../trpc';
@@ -240,5 +240,27 @@ export const messagesRouter = router({
       } finally {
         subscribers.get(input.conversationId)?.delete(handler);
       }
+    }),
+
+  /** Returns the ID of the most recently-read message by any other member (for Seen receipts). */
+  lastSeen: protectedProcedure
+    .input(z.object({ conversationId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      await assertMember(input.conversationId, ctx.userId);
+
+      const [row] = await db
+        .select({ messageId: messageReads.messageId })
+        .from(messageReads)
+        .innerJoin(messages, eq(messages.id, messageReads.messageId))
+        .where(
+          and(
+            eq(messages.conversationId, input.conversationId),
+            sql`${messageReads.userId} != ${ctx.userId}`,
+          ),
+        )
+        .orderBy(desc(messages.createdAt))
+        .limit(1);
+
+      return { lastReadMessageId: row?.messageId ?? null };
     }),
 });

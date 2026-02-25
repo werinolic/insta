@@ -91,7 +91,14 @@ export function PostCard({ post, useLiveCount = false }: { post: FeedPost; useLi
 
       {/* Media */}
       {media.length > 0 && (
-        <div className="relative bg-black aspect-square">
+        <div
+          className="relative bg-black aspect-square outline-none"
+          tabIndex={media.length > 1 ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') setMediaIndex((i) => Math.max(0, i - 1));
+            if (e.key === 'ArrowRight') setMediaIndex((i) => Math.min(media.length - 1, i + 1));
+          }}
+        >
           <img
             src={currentMedia?.mediumUrl ?? currentMedia?.url ?? ''}
             alt=""

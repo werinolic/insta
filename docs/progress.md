@@ -119,6 +119,13 @@
 - [x] Mobile "who liked" screen (/likes/[postId]) — tap like count in feed or post detail
 - [x] Like count tappable in mobile PostCard and post detail screen
 
+## Phase 10: Spec Completion ✅
+- [x] Arrow key carousel navigation on web PostCard (tabIndex + onKeyDown ←→)
+- [x] Group chat creation UI on web messages — DM/Group toggle, add multiple users, optional group name
+- [x] messages.lastSeen API procedure (latest message read by other members)
+- [x] Read receipts "Seen ✓✓" in web ChatWindow — shown under last outgoing message the other user has read
+- [x] Read receipts "Seen ✓✓" in mobile chat screen — same logic
+
 ## Blockers
 - none
 

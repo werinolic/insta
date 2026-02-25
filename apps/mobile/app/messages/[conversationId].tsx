@@ -29,6 +29,7 @@ export default function ChatScreen() {
   const listRef = useRef<FlatList>(null);
 
   const { data, isLoading } = trpc.messages.history.useQuery({ conversationId, limit: 50 });
+  const { data: seenData } = trpc.messages.lastSeen.useQuery({ conversationId });
 
   const sendMessage = trpc.messages.send.useMutation({
     onSuccess: () => {
@@ -89,6 +90,11 @@ export default function ChatScreen() {
   const liveIds = new Set(historicalMessages.map((m) => m.id));
   const allMessages = [...historicalMessages, ...liveMessages.filter((m) => !liveIds.has(m.id))];
 
+  const lastReadMessageId = seenData?.lastReadMessageId ?? null;
+  const outgoing = allMessages.filter((m) => m.senderId === currentUser?.id);
+  const lastOutgoingId = outgoing.length > 0 ? outgoing[outgoing.length - 1].id : null;
+  const seenMessageId = lastOutgoingId && lastOutgoingId === lastReadMessageId ? lastOutgoingId : null;
+
   if (isLoading) return <View style={s.center}><ActivityIndicator /></View>;
 
   return (
@@ -101,13 +107,18 @@ export default function ChatScreen() {
         renderItem={({ item: msg }) => {
           const isMine = msg.senderId === currentUser?.id;
           return (
-            <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs, msg.type === 'photo' && s.bubblePhoto]}>
-              {msg.type === 'photo' && msg.mediaUrl ? (
-                <Image source={{ uri: msg.mediaUrl }} style={s.photoImage} resizeMode="cover" />
-              ) : msg.type === 'post_share' ? (
-                <Text style={[s.bubbleText, isMine && s.bubbleTextMine, s.italic]}>📷 Shared a post</Text>
-              ) : (
-                <Text style={[s.bubbleText, isMine && s.bubbleTextMine]}>{msg.text ?? ''}</Text>
+            <View>
+              <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs, msg.type === 'photo' && s.bubblePhoto]}>
+                {msg.type === 'photo' && msg.mediaUrl ? (
+                  <Image source={{ uri: msg.mediaUrl }} style={s.photoImage} resizeMode="cover" />
+                ) : msg.type === 'post_share' ? (
+                  <Text style={[s.bubbleText, isMine && s.bubbleTextMine, s.italic]}>📷 Shared a post</Text>
+                ) : (
+                  <Text style={[s.bubbleText, isMine && s.bubbleTextMine]}>{msg.text ?? ''}</Text>
+                )}
+              </View>
+              {seenMessageId === msg.id && (
+                <Text style={s.seenLabel}>Seen ✓✓</Text>
               )}
             </View>
           );
@@ -170,4 +181,5 @@ const s = StyleSheet.create({
   sendBtn: { marginLeft: 8, backgroundColor: '#0095f6', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
   sendBtnDisabled: { opacity: 0.4 },
   sendBtnText: { color: '#fff', fontWeight: '600' },
+  seenLabel: { textAlign: 'right', fontSize: 11, color: '#aaa', marginTop: 2, marginBottom: 2, paddingHorizontal: 4 },
 });
