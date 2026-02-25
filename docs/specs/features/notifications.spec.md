@@ -1,28 +1,29 @@
 # Feature: Notifications
-**Status:** Approved
-**Last updated:** 2026-02-24
+**Status:** Implemented
+**Last updated:** 2026-02-25
 
 ## Overview
 Users receive real-time notifications for social interactions involving them.
 
 ## User Stories
-- [ ] As a user, I receive a notification when someone likes my post
-- [ ] As a user, I receive a notification when someone comments on my post
-- [ ] As a user, I receive a notification when someone follows me
-- [ ] As a user, I receive a notification when someone @mentions me in a caption or comment
-- [ ] As a user, I receive a notification when someone sends me a DM
-- [ ] As a user, I can see a list of my recent notifications
-- [ ] As a user, I can see an unread notification count (badge)
-- [ ] As a user, notifications are marked as read when I open the notifications list
+- [x] As a user, I receive a notification when someone likes my post
+- [x] As a user, I receive a notification when someone comments on my post
+- [x] As a user, I receive a notification when someone follows me
+- [x] As a user, I receive a notification when someone @mentions me in a caption or comment
+- [x] As a user, I receive a notification when someone sends me a DM
+- [x] As a user, I can see a list of my recent notifications
+- [x] As a user, I can see an unread notification count (badge)
+- [x] As a user, notifications are marked as read when I open the notifications list
 
 ## Acceptance Criteria
-- Notifications delivered in real-time via SSE (tRPC subscription, consistent with ADR-003)
+- Notifications delivered in real-time via WebSocket subscription (`notifications.subscribe`)
 - Notifications persisted in DB (survive page refresh)
-- Notification types: like | comment | follow | mention | message
-- No duplicate notifications (e.g. user likes then unlikes then relikes = 1 notification max per hour per actor+target pair)
-- Notification badge count shown in nav/tab bar
+- Notification types: `like` | `comment` | `follow` | `mention` | `message`
+- No duplicate notifications: if an identical notification (same actor + recipient + type + postId) was created within the last hour, the new one is skipped
+- Notification badge count shown in nav (web) / tab bar (mobile)
 - Notifications paginated: 30 per page, newest first, cursor-based
 - Self-actions do not generate notifications (liking your own post = no notification)
+- Badge count seeded from `notifications.unreadCount` on app load; incremented in real-time via WS subscription
 
 ## Data Model
 ```
@@ -40,9 +41,10 @@ notifications(
 
 ## Technical Notes
 - Notifications written server-side at the point of action (like, comment, follow, mention, DM send)
-- SSE subscription: client subscribes on login, receives notification payloads in real-time
-- Badge count: sum of unread notifications, updated via SSE event
-- Mention parsing: extract @usernames from caption/comment text on server, resolve to user IDs
+- Real-time delivery: WebSocket subscription via tRPC `notifications.subscribe`; actor info and updated unread count are included in each pushed payload
+- Badge count: `unreadCount` included in each push payload; client updates Zustand store on receipt
+- Mention parsing: `parseMentions()` extracts `@usernames` from caption/comment text server-side, resolves to user IDs, creates one notification per mentioned user
+- Deduplication logic lives in `createNotification()` helper (`apps/api/src/lib/notifications.ts`)
 
 ## Out of Scope (v1)
 - Push notifications (mobile)

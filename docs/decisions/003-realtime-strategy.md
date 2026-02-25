@@ -1,7 +1,8 @@
-# ADR-003: WebSocket for DMs, SSE for notifications (via tRPC subscriptions)
+# ADR-003: WebSocket for all real-time subscriptions
 
 **Date:** 2026-02-24
-**Status:** Accepted
+**Updated:** 2026-02-25
+**Status:** Accepted (revised — see note below)
 
 ## Context
 The app needs two types of real-time updates:
@@ -10,23 +11,26 @@ The app needs two types of real-time updates:
 
 Options considered: WebSocket only, SSE only, SSE + WS, polling.
 
-## Decision
+## Original Decision (2026-02-24)
 Use two transports via tRPC subscriptions, both hosted on the same Fastify server:
+- **DMs → WebSocket** — bidirectional transport suits the send/receive nature of chat.
+- **Notifications → SSE** — unidirectional (server pushes events to client). Simpler than WebSocket.
 
-- **DMs → WebSocket** — bidirectional transport suits the send/receive nature of
-  chat. tRPC subscription procedures handle message delivery; presence and typing
-  indicators can be added later.
-- **Notifications → SSE** — unidirectional (server pushes events to client).
-  Simpler than WebSocket; no keep-alive ping complexity. Browser-native.
+## Revised Decision (2026-02-25)
+**WebSocket is used for all tRPC subscriptions** — both DMs and notifications.
 
-Both are implemented as tRPC `subscription` procedures, keeping the client API
-uniform regardless of underlying transport.
+During implementation, the web client was configured with a single `splitLink` (httpBatchLink + wsLink). Routing all subscriptions through `wsLink` simplifies the client setup: one connection handles messages, notifications, and like-count updates uniformly, without needing a separate SSE adapter.
+
+The mobile client (`expo`) uses the same `splitLink` pattern for the same reasons.
+
+Subscription procedures implemented:
+- `messages.subscribe` — live message and typing-indicator delivery
+- `notifications.subscribe` — real-time notification badge + payload
+- `likes.subscribeCount` — live like count on post detail page
 
 ## Consequences
-+ Right transport for each use case (no overengineering)
-+ Single Fastify process — no separate real-time service to deploy
-+ SSE degrades gracefully (automatic reconnect built into browsers)
-- Two different tRPC adapters must be configured (httpLink + wsLink + sseLink)
-- WebSocket connections require connection management (reconnect on drop)
-- Horizontal scaling will require sticky sessions or a pub/sub layer (Redis)
-  — acceptable to defer to v2
++ Single WebSocket connection per client covers all real-time features
++ Uniform tRPC client configuration on web and mobile
++ No need for a separate SSE event-source adapter
+- WebSocket requires a persistent connection; SSE would have been simpler for the notification-only use case
+- Horizontal scaling requires sticky sessions or a Redis pub/sub layer — acceptable to defer to v2
