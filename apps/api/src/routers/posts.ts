@@ -1,6 +1,6 @@
 import '@fastify/cookie';
 import { z } from 'zod';
-import { eq, and, inArray, lt, desc, sql } from 'drizzle-orm';
+import { eq, and, inArray, lt, desc, sql, isNull } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { db, posts, postMedia, users, follows, likes } from '@repo/db';
 import { router, publicProcedure, protectedProcedure } from '../trpc';
@@ -46,7 +46,6 @@ export const postsRouter = router({
         })),
       );
 
-      // Handle @mention notifications
       if (input.caption) {
         const usernames = parseMentions(input.caption);
         if (usernames.length > 0) {
@@ -107,6 +106,7 @@ export const postsRouter = router({
         .where(
           and(
             inArray(posts.userId, authorIds),
+            isNull(posts.archivedAt),
             cursorPost?.[0] ? lt(posts.createdAt, cursorPost[0].createdAt) : undefined,
           ),
         )
@@ -117,7 +117,6 @@ export const postsRouter = router({
       const hasMore = feedPosts.length > input.limit;
       const items = hasMore ? feedPosts.slice(0, input.limit) : feedPosts;
 
-      // Attach media to each post
       const postIds = items.map((p) => p.id);
       const media =
         postIds.length > 0
@@ -128,7 +127,6 @@ export const postsRouter = router({
               .orderBy(postMedia.order)
           : [];
 
-      // Attach viewer's like status
       const viewerLikes =
         postIds.length > 0
           ? await db
@@ -160,6 +158,7 @@ export const postsRouter = router({
           caption: posts.caption,
           createdAt: posts.createdAt,
           userId: posts.userId,
+          archivedAt: posts.archivedAt,
           username: users.username,
           fullName: users.fullName,
           avatarUrl: users.avatarUrl,
@@ -173,6 +172,11 @@ export const postsRouter = router({
         .limit(1);
 
       if (!post) throw new TRPCError({ code: 'NOT_FOUND', message: 'Post not found' });
+
+      // Archived posts are only visible to the owner
+      if (post.archivedAt && post.userId !== ctx.userId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Post not found' });
+      }
 
       const media = await db
         .select()
@@ -190,7 +194,13 @@ export const postsRouter = router({
           ).length > 0
         : false;
 
-      return { ...post, likeCount: Number(post.likeCount), likedByViewer, media };
+      return {
+        ...post,
+        likeCount: Number(post.likeCount),
+        likedByViewer,
+        media,
+        isArchived: post.archivedAt !== null,
+      };
     }),
 
   byUsername: publicProcedure
@@ -229,10 +239,78 @@ export const postsRouter = router({
         .where(
           and(
             eq(posts.userId, user.id),
+            isNull(posts.archivedAt),
             cursorPost?.[0] ? lt(posts.createdAt, cursorPost[0].createdAt) : undefined,
           ),
         )
         .orderBy(desc(posts.createdAt))
+        .limit(input.limit + 1);
+
+      const hasMore = rows.length > input.limit;
+      const items = hasMore ? rows.slice(0, input.limit) : rows;
+
+      return { items, nextCursor: hasMore ? items[items.length - 1].id : undefined };
+    }),
+
+  // Toggle archive on/off for own post
+  archive: protectedProcedure
+    .input(z.object({ postId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [post] = await db
+        .select({ userId: posts.userId, archivedAt: posts.archivedAt })
+        .from(posts)
+        .where(eq(posts.id, input.postId))
+        .limit(1);
+
+      if (!post) throw new TRPCError({ code: 'NOT_FOUND', message: 'Post not found' });
+      if (post.userId !== ctx.userId) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not your post' });
+      }
+
+      const nowArchived = post.archivedAt === null;
+      await db
+        .update(posts)
+        .set({ archivedAt: nowArchived ? new Date() : null })
+        .where(eq(posts.id, input.postId));
+
+      return { isArchived: nowArchived };
+    }),
+
+  // List the owner's archived posts (private — only for the authenticated user)
+  archived: protectedProcedure
+    .input(
+      z.object({
+        cursor: z.string().optional(),
+        limit: z.number().int().min(1).max(50).default(12),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const cursorPost = input.cursor
+        ? await db.select({ createdAt: posts.createdAt }).from(posts).where(eq(posts.id, input.cursor)).limit(1)
+        : null;
+
+      const rows = await db
+        .select({
+          id: posts.id,
+          caption: posts.caption,
+          createdAt: posts.createdAt,
+          archivedAt: posts.archivedAt,
+          thumbnailUrl: sql<string>`(
+            select pm.thumbnail_url from post_media pm
+            where pm.post_id = ${posts.id}
+            order by pm."order" asc
+            limit 1
+          )`,
+        })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.userId, ctx.userId),
+            sql`${posts.archivedAt} is not null`,
+            cursorPost?.[0] ? lt(posts.createdAt, cursorPost[0].createdAt) : undefined,
+          ),
+        )
+        .orderBy(desc(posts.archivedAt))
         .limit(input.limit + 1);
 
       const hasMore = rows.length > input.limit;

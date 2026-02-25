@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { LikeButton } from './like-button';
+import { PostActionsMenu } from './post-actions-menu';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/lib/store';
 
@@ -17,6 +18,7 @@ export interface FeedPost {
   avatarUrl: string | null;
   likeCount: number;
   likedByViewer: boolean;
+  isArchived?: boolean;
   media: {
     id: string;
     url: string;
@@ -77,6 +79,11 @@ export function PostCard({ post }: { post: FeedPost }) {
           {post.fullName && <p className="text-xs text-gray-500 truncate">{post.fullName}</p>}
         </div>
         <span className="text-xs text-gray-400">{timeAgo(post.createdAt)}</span>
+        <PostActionsMenu
+          postId={post.id}
+          postUserId={post.userId}
+          isArchived={post.isArchived}
+        />
       </div>
 
       {/* Media */}
