@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { Text } from 'react-native';
 import { useAuthStore, useUIStore } from '../../lib/store';
+import { trpc } from '../../lib/trpc';
 
 function TabIcon({ label, badge }: { label: string; badge?: number }) {
   return (
@@ -13,6 +15,30 @@ function TabIcon({ label, badge }: { label: string; badge?: number }) {
   );
 }
 
+function NotificationBadgeSync() {
+  const { setNotificationCount, notificationCount } = useUIStore();
+
+  // Seed initial count from DB on mount
+  const { data } = trpc.notifications.unreadCount.useQuery(undefined, {
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (data !== undefined) {
+      setNotificationCount(data.count);
+    }
+  }, [data?.count]);
+
+  // Live badge increment via WS subscription
+  trpc.notifications.subscribe.useSubscription(undefined, {
+    onData: () => {
+      setNotificationCount(notificationCount + 1);
+    },
+  });
+
+  return null;
+}
+
 export default function TabsLayout() {
   const user = useAuthStore((s) => s.user);
   const notificationCount = useUIStore((s) => s.notificationCount);
@@ -20,33 +46,36 @@ export default function TabsLayout() {
   if (!user) return <Redirect href="/(auth)/login" />;
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarActiveTintColor: '#000',
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{ tabBarIcon: () => <TabIcon label="🏠" /> }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{ tabBarIcon: () => <TabIcon label="🔍" /> }}
-      />
-      <Tabs.Screen
-        name="new"
-        options={{ tabBarIcon: () => <TabIcon label="➕" /> }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{ tabBarIcon: () => <TabIcon label="🤍" badge={notificationCount} /> }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{ tabBarIcon: () => <TabIcon label="👤" /> }}
-      />
-    </Tabs>
+    <>
+      <NotificationBadgeSync />
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarActiveTintColor: '#000',
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{ tabBarIcon: () => <TabIcon label="🏠" /> }}
+        />
+        <Tabs.Screen
+          name="search"
+          options={{ tabBarIcon: () => <TabIcon label="🔍" /> }}
+        />
+        <Tabs.Screen
+          name="new"
+          options={{ tabBarIcon: () => <TabIcon label="➕" /> }}
+        />
+        <Tabs.Screen
+          name="notifications"
+          options={{ tabBarIcon: () => <TabIcon label="🤍" badge={notificationCount} /> }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{ tabBarIcon: () => <TabIcon label="👤" /> }}
+        />
+      </Tabs>
+    </>
   );
 }

@@ -78,7 +78,7 @@
 ### Real-time
 - [x] WS client setup (singleton wsClient, reset on logout)
 - [x] `messages.subscribe` — live DM delivery in chat screen
-- [ ] `notifications.subscribe` — live notification badge (subscribe wired, badge update pending)
+- [x] `notifications.subscribe` — live notification badge (WS subscription in tab layout, seeds from unreadCount)
 
 ## Blockers
 - none
