@@ -38,6 +38,13 @@ export function Navbar() {
               </svg>
             </Link>
 
+            <Link href="/explore" title="Explore">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+
             {/* Create post */}
             <button onClick={() => setShowCreate(true)} title="Create post">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

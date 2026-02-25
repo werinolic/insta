@@ -1,12 +1,15 @@
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { trpc } from '../../lib/trpc';
 import { useAuthStore } from '../../lib/store';
+import { uploadAsset } from '../../lib/upload';
 
 interface Message {
   id: string;
   text: string | null;
+  mediaUrl: string | null;
   senderId: string;
   senderUsername: string;
   type: string;
@@ -19,6 +22,7 @@ export default function ChatScreen() {
   const currentUser = useAuthStore((s) => s.user);
   const utils = trpc.useUtils();
   const [text, setText] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
   const [liveMessages, setLiveMessages] = useState<Message[]>([]);
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,6 +67,24 @@ export default function ChatScreen() {
     [conversationId],
   );
 
+  async function handlePickImage() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.9,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setImageUploading(true);
+    try {
+      const { mediumUrl } = await uploadAsset(result.assets[0]);
+      sendMessage.mutate({ conversationId, type: 'photo', mediaUrl: mediumUrl });
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
   const historicalMessages: Message[] = (data?.items as Message[]) ?? [];
   const liveIds = new Set(historicalMessages.map((m) => m.id));
   const allMessages = [...historicalMessages, ...liveMessages.filter((m) => !liveIds.has(m.id))];
@@ -79,8 +101,10 @@ export default function ChatScreen() {
         renderItem={({ item: msg }) => {
           const isMine = msg.senderId === currentUser?.id;
           return (
-            <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs]}>
-              {msg.type === 'post_share' ? (
+            <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs, msg.type === 'photo' && s.bubblePhoto]}>
+              {msg.type === 'photo' && msg.mediaUrl ? (
+                <Image source={{ uri: msg.mediaUrl }} style={s.photoImage} resizeMode="cover" />
+              ) : msg.type === 'post_share' ? (
                 <Text style={[s.bubbleText, isMine && s.bubbleTextMine, s.italic]}>📷 Shared a post</Text>
               ) : (
                 <Text style={[s.bubbleText, isMine && s.bubbleTextMine]}>{msg.text ?? ''}</Text>
@@ -99,6 +123,13 @@ export default function ChatScreen() {
       />
 
       <View style={s.inputRow}>
+        <TouchableOpacity
+          style={[s.iconBtn, imageUploading && s.sendBtnDisabled]}
+          onPress={handlePickImage}
+          disabled={imageUploading}
+        >
+          <Text style={s.iconBtnText}>{imageUploading ? '⏳' : '🖼'}</Text>
+        </TouchableOpacity>
         <TextInput
           style={s.input}
           placeholder="Message…"
@@ -127,10 +158,14 @@ const s = StyleSheet.create({
   bubble: { maxWidth: '75%', borderRadius: 18, padding: 10, marginVertical: 3 },
   bubbleMine: { backgroundColor: '#0095f6', alignSelf: 'flex-end' },
   bubbleTheirs: { backgroundColor: '#f0f0f0', alignSelf: 'flex-start' },
+  bubblePhoto: { padding: 0, overflow: 'hidden' },
+  photoImage: { width: 200, height: 200, borderRadius: 18 },
   bubbleText: { fontSize: 15, color: '#000' },
   bubbleTextMine: { color: '#fff' },
   italic: { fontStyle: 'italic' },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', padding: 12, borderTopWidth: StyleSheet.hairlineWidth, borderColor: '#eee' },
+  iconBtn: { paddingHorizontal: 8, paddingVertical: 10 },
+  iconBtnText: { fontSize: 22 },
   input: { flex: 1, borderWidth: 1, borderColor: '#dbdbdb', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, fontSize: 15, maxHeight: 100 },
   sendBtn: { marginLeft: 8, backgroundColor: '#0095f6', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
   sendBtnDisabled: { opacity: 0.4 },

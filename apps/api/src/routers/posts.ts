@@ -319,6 +319,52 @@ export const postsRouter = router({
       return { items, nextCursor: hasMore ? items[items.length - 1].id : undefined };
     }),
 
+  explore: protectedProcedure
+    .input(
+      z.object({
+        cursor: z.string().optional(),
+        limit: z.number().int().min(1).max(50).default(24),
+      }),
+    )
+    .query(async ({ input }) => {
+      const cursorPost = input.cursor
+        ? await db.select({ createdAt: posts.createdAt }).from(posts).where(eq(posts.id, input.cursor)).limit(1)
+        : null;
+
+      const rows = await db
+        .select({
+          id: posts.id,
+          createdAt: posts.createdAt,
+          userId: posts.userId,
+          thumbnailUrl: sql<string>`(
+            select pm.thumbnail_url from post_media pm
+            where pm.post_id = ${posts.id}
+            order by pm."order" asc
+            limit 1
+          )`,
+          likeCount: sql<number>`count(distinct ${likes.userId})`,
+        })
+        .from(posts)
+        .leftJoin(likes, eq(likes.postId, posts.id))
+        .where(
+          and(
+            isNull(posts.archivedAt),
+            cursorPost?.[0] ? lt(posts.createdAt, cursorPost[0].createdAt) : undefined,
+          ),
+        )
+        .groupBy(posts.id)
+        .orderBy(desc(posts.createdAt))
+        .limit(input.limit + 1);
+
+      const hasMore = rows.length > input.limit;
+      const items = hasMore ? rows.slice(0, input.limit) : rows;
+
+      return {
+        items: items.map((r) => ({ ...r, likeCount: Number(r.likeCount) })),
+        nextCursor: hasMore ? items[items.length - 1].id : undefined,
+      };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ input, ctx }) => {

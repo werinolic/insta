@@ -97,6 +97,14 @@
 - [x] Post sharing via DM — mobile Alert action sheet
 - [x] post_share message type rendered in both web and mobile chat
 
+## Phase 7: Photo Messages, Explore & EAS ✅
+- [x] Photo messages in DM — web: image icon + file picker + POST /upload + photo bubble
+- [x] Photo messages in DM — mobile: image picker + uploadAsset + photo bubble
+- [x] posts.explore API procedure (all non-archived posts, cursor pagination)
+- [x] Explore page (web) — /explore route, 3-col thumbnail grid, infinite scroll
+- [x] Explore link in web navbar (search icon)
+- [x] EAS build config (apps/mobile/eas.json) with development/preview/production profiles
+
 ## Blockers
 - none
 

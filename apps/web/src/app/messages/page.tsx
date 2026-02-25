@@ -7,6 +7,8 @@ import { AuthGuard } from '@/components/auth/auth-guard';
 import { Navbar } from '@/components/nav/navbar';
 import { Spinner } from '@/components/ui/spinner';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
 interface Conversation {
   id: string;
   name: string | null;
@@ -21,6 +23,7 @@ interface Conversation {
 interface Message {
   id: string;
   text: string | null;
+  mediaUrl: string | null;
   senderId: string;
   senderUsername: string;
   type: string;
@@ -77,10 +80,13 @@ function ConversationList({ onSelect }: { onSelect: (id: string, title: string) 
 
 function ChatWindow({ conversationId }: { conversationId: string }) {
   const currentUser = useAuthStore((s) => s.user);
+  const token = useAuthStore((s) => s.accessToken);
   const [text, setText] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
   const [liveMessages, setLiveMessages] = useState<Message[]>([]);
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
@@ -127,6 +133,24 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
     [conversationId],
   );
 
+  async function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !token) return;
+    e.target.value = '';
+    setImageUploading(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/upload?purpose=post&filename=${encodeURIComponent(file.name)}`,
+        { method: 'POST', body: file, headers: { 'Content-Type': file.type, Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) throw new Error('Upload failed');
+      const { mediumUrl } = await res.json() as { mediumUrl: string };
+      send.mutate({ conversationId, type: 'photo', mediaUrl: mediumUrl });
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
   if (isLoading) return <div className="flex justify-center py-8"><Spinner /></div>;
 
   const historical = (data?.items ?? []) as Message[];
@@ -141,13 +165,15 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
           return (
             <div key={m.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`max-w-xs px-3 py-2 rounded-2xl text-sm ${
+                className={`max-w-xs rounded-2xl overflow-hidden text-sm ${
                   isOwn
                     ? 'bg-brand text-white rounded-br-sm'
                     : 'bg-gray-100 text-gray-900 rounded-bl-sm'
-                }`}
+                } ${m.type === 'photo' ? '' : 'px-3 py-2'}`}
               >
-                {m.type === 'post_share' ? (
+                {m.type === 'photo' && m.mediaUrl ? (
+                  <img src={m.mediaUrl} alt="" className="max-w-[240px] max-h-[240px] object-cover block" />
+                ) : m.type === 'post_share' ? (
                   <span className="italic text-xs opacity-80">📷 Shared a post</span>
                 ) : (
                   m.text
@@ -168,14 +194,41 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
       </div>
 
       <div className="border-t border-gray-200 p-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleImagePick}
+        />
         <form
           onSubmit={(e) => {
             e.preventDefault();
             if (!text.trim()) return;
             send.mutate({ conversationId, text: text.trim() });
           }}
-          className="flex gap-2"
+          className="flex gap-2 items-center"
         >
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={imageUploading}
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 disabled:opacity-40 transition-colors"
+            title="Send photo"
+          >
+            {imageUploading ? (
+              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="8.5" cy="8.5" r="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="21 15 16 10 5 21" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
           <input
             value={text}
             onChange={(e) => handleTextChange(e.target.value)}
