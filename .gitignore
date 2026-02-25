@@ -6,3 +6,9 @@ dist/
 *.env
 *.env.local
 .DS_Store
+
+# Claude Code internal
+.claude/
+
+# TypeScript build cache
+*.tsbuildinfo
