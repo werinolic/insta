@@ -24,15 +24,26 @@
 - [x] DMs: conversations (DM + group), messages, WS subscription, typing indicator
 - [x] Auth: changeUsername (14-day cooldown added)
 
-## Phase 3: Social
-- [ ] Likes + Comments
-- [ ] Direct messages (WebSocket)
-- [ ] Group chats
+## Phase 3: Web Client ✅
+- [x] Next.js 15 App Router setup (Tailwind, tRPC, TanStack Query, Zustand)
+- [x] Auth pages: login, register
+- [x] Session bootstrap: auth.refresh on mount restores session from cookie
+- [x] Feed page with infinite scroll
+- [x] Post detail page with comments
+- [x] Profile page with post grid
+- [x] Messages page (conversation list + chat window)
+- [x] Notifications page (mark all read on visit)
+- [x] Settings page (profile, username, password)
+- [x] Optimistic like toggle
+- [x] AuthGuard component
 
-## Phase 4: Polish
-- [ ] Settings page
-- [ ] Notifications
-- [ ] Share / forward posts
+## Phase 4: Mobile (Expo)
+- [ ] Expo app setup (Tamagui)
+- [ ] Auth screens
+- [ ] Feed + post detail
+- [ ] Profile
+- [ ] Messages (WebSocket)
+- [ ] Notifications (SSE)
 
 ## Blockers
 - none
