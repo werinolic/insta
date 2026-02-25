@@ -6,8 +6,10 @@ import type { FastifyTRPCPluginOptions } from '@trpc/server/adapters/fastify';
 import { appRouter } from './routers';
 import type { AppRouter } from './routers';
 import { createContext } from './trpc';
+import { ensureBucket } from './lib/minio';
 
 async function main() {
+  await ensureBucket();
   const app = Fastify({ logger: true });
 
   await app.register(fastifyCookie);
