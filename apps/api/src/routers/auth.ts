@@ -44,6 +44,27 @@ export const authRouter = router({
     return { accessToken, user: toSafeUser(user) };
   }),
 
+  // Mobile: takes sessionId as input (cannot use httpOnly cookies in React Native)
+  refreshMobile: publicProcedure
+    .input(z.object({ sessionId: z.string() }))
+    .mutation(async ({ input }) => {
+      const [session] = await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, input.sessionId))
+        .limit(1);
+
+      if (!session || session.expiresAt < new Date()) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Session expired' });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+      if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+
+      const accessToken = await signAccessToken(user.id);
+      return { accessToken, user: toSafeUser(user) };
+    }),
+
   register: publicProcedure.input(registerSchema).mutation(async ({ input, ctx }) => {
     const existing = await db
       .select({ id: users.id })
@@ -77,7 +98,7 @@ export const authRouter = router({
     const accessToken = await signAccessToken(userId);
     ctx.res.setCookie('session_id', sessionId, sessionCookieOptions(expiresAt));
 
-    return { accessToken, user: toSafeUser(user) };
+    return { accessToken, sessionId, user: toSafeUser(user) };
   }),
 
   login: publicProcedure.input(loginSchema).mutation(async ({ input, ctx }) => {
@@ -104,7 +125,7 @@ export const authRouter = router({
     const accessToken = await signAccessToken(user.id);
     ctx.res.setCookie('session_id', sessionId, sessionCookieOptions(expiresAt));
 
-    return { accessToken, user: toSafeUser(user) };
+    return { accessToken, sessionId, user: toSafeUser(user) };
   }),
 
   logout: protectedProcedure.mutation(async ({ ctx }) => {

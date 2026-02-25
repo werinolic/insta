@@ -43,9 +43,9 @@
 > ADRs: `docs/decisions/007-mobile-auth.md`, `docs/decisions/008-mobile-realtime.md`
 
 ### Pre-work — API changes needed first
-- [ ] `auth.login` + `auth.register`: return `sessionId` in JSON body (ADR-007)
-- [ ] Add `auth.refreshMobile` procedure (takes `sessionId` as input, not cookie)
-- [ ] Register Fastify WebSocket adapter on API for WS subscriptions (ADR-008)
+- [x] `auth.login` + `auth.register`: return `sessionId` in JSON body (ADR-007)
+- [x] Add `auth.refreshMobile` procedure (takes `sessionId` as input, not cookie)
+- [x] Register Fastify WebSocket adapter on API for WS subscriptions (ADR-008)
 
 ### Setup
 - [ ] Install Expo + Expo Router in `apps/mobile/`

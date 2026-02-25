@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import fastifyWs from '@fastify/websocket';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import type { FastifyTRPCPluginOptions } from '@trpc/server/adapters/fastify';
 import sharp from 'sharp';
@@ -26,6 +27,7 @@ async function main() {
     app.addContentTypeParser(mime, { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
   }
 
+  await app.register(fastifyWs);
   await app.register(fastifyCookie);
   await app.register(fastifyCors, {
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
@@ -99,6 +101,7 @@ async function main() {
 
   await app.register(fastifyTRPCPlugin, {
     prefix: '/trpc',
+    useWSS: true,
     trpcOptions: {
       router: appRouter,
       createContext,
