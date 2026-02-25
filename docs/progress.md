@@ -38,15 +38,54 @@
 - [x] AuthGuard component
 
 ## Phase 4: Mobile (Expo)
-- [ ] Expo app setup (Tamagui)
-- [ ] Auth screens
-- [ ] Feed + post detail
-- [ ] Profile
-- [ ] Messages (WebSocket)
-- [ ] Notifications (SSE)
+
+> Full guide: `docs/mobile/README.md`
+> ADRs: `docs/decisions/007-mobile-auth.md`, `docs/decisions/008-mobile-realtime.md`
+
+### Pre-work — API changes needed first
+- [ ] `auth.login` + `auth.register`: return `sessionId` in JSON body (ADR-007)
+- [ ] Add `auth.refreshMobile` procedure (takes `sessionId` as input, not cookie)
+- [ ] Register Fastify WebSocket adapter on API for WS subscriptions (ADR-008)
+
+### Setup
+- [ ] Install Expo + Expo Router in `apps/mobile/`
+- [ ] Install Tamagui and populate `packages/ui/` with shared primitives
+- [ ] tRPC client with `splitLink` (httpBatchLink + wsLink)
+- [ ] Zustand store with `expo-secure-store` persistence
+- [ ] Auth bootstrap in root `_layout.tsx` (reads sessionId from SecureStore)
+
+### Screens
+- [ ] Login screen (`/(auth)/login`)
+- [ ] Register screen (`/(auth)/register`)
+- [ ] Feed tab — `FlatList` infinite scroll, PostCard component
+- [ ] Create post tab — `expo-image-picker`, upload via `POST /upload`
+- [ ] Search tab — user search
+- [ ] Notifications tab — list, mark all read, badge count via WS subscription
+- [ ] Profile tab — own profile (PostGrid, follow counts)
+- [ ] Public profile screen (`/[username]`)
+- [ ] Post detail screen (`/p/[postId]`) — carousel, comments, like button
+- [ ] Messages screen — conversation list
+- [ ] Chat screen (`/messages/[conversationId]`) — WS subscription for live messages
+- [ ] Settings screens — edit profile, change password, change username, archived posts
+
+### Components
+- [ ] `PostCard` — same data shape as web, adapt to React Native
+- [ ] `PostGrid` — `FlatList` 3-column grid
+- [ ] `LikeButton` — optimistic toggle (same mutation logic as web)
+- [ ] `CommentList` — nested replies
+- [ ] `ProfileHeader` — avatar, bio, follow button
+- [ ] `PostActionsMenu` — ActionSheet (archive/delete) for own posts
+- [ ] `NotificationItem`
+- [ ] `ChatBubble`
+- [ ] `AuthGuard` — `<Redirect href="/login" />` pattern in Expo Router
+
+### Real-time
+- [ ] WS client setup with reconnect on `NetInfo` change
+- [ ] `messages.subscribe` — live DM delivery
+- [ ] `notifications.subscribe` — live notification badge
 
 ## Blockers
 - none
 
 ## Decisions
-- see /docs/decisions/
+- see `docs/decisions/` (ADR-001 through ADR-008)
