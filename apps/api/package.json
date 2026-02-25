@@ -2,6 +2,13 @@
   "name": "@repo/api",
   "version": "0.0.1",
   "private": true,
+  "types": "./src/router-types.ts",
+  "exports": {
+    ".": {
+      "types": "./src/router-types.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist",

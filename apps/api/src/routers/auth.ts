@@ -21,6 +21,29 @@ function toSafeUser(user: UserRow) {
 }
 
 export const authRouter = router({
+  // Exchanges a valid session cookie for a fresh access token
+  refresh: publicProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.sessionId) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'No session' });
+    }
+
+    const [session] = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, ctx.sessionId))
+      .limit(1);
+
+    if (!session || session.expiresAt < new Date()) {
+      throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Session expired' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+    if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+
+    const accessToken = await signAccessToken(user.id);
+    return { accessToken, user: toSafeUser(user) };
+  }),
+
   register: publicProcedure.input(registerSchema).mutation(async ({ input, ctx }) => {
     const existing = await db
       .select({ id: users.id })

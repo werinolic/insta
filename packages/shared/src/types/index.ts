@@ -19,8 +19,10 @@ export type SafeUser = {
   bio: string | null;
   website: string | null;
   avatarUrl: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  usernameChangedAt: string | null;
+  // Dates are serialized to strings over JSON (no superjson transformer)
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AuthResponse = {
