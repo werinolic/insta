@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/lib/store';
 import { Spinner } from '@/components/ui/spinner';
+import { renderMentions } from '@/lib/mentions';
 
 interface CommentRow {
   id: string;
@@ -51,7 +52,7 @@ function CommentItem({ comment, postId }: { comment: CommentRow; postId: string 
           <Link href={`/${comment.username}`} className="font-semibold mr-1.5 hover:underline">
             {comment.username}
           </Link>
-          {comment.text}
+          {renderMentions(comment.text)}
         </p>
         <div className="flex items-center gap-3 mt-0.5">
           <span className="text-xs text-gray-400">{timeAgo(comment.createdAt)}</span>

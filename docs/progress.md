@@ -105,6 +105,13 @@
 - [x] Explore link in web navbar (search icon)
 - [x] EAS build config (apps/mobile/eas.json) with development/preview/production profiles
 
+## Phase 8: UX Polish ✅
+- [x] @mention highlighting in web captions + comments (renderMentions helper → Next.js Link)
+- [x] @mention highlighting in mobile captions + comments (MentionText component → router.push)
+- [x] "Who liked" modal on web — click the like count to see list of likers (likes.likedBy)
+- [x] Real-time like count on post detail (LikeButtonLive with likes.subscribeCount WS subscription)
+- [x] posts.explore API + web /explore page (Phase 7, already logged above)
+
 ## Blockers
 - none
 

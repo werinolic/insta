@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { LikeButton } from './like-button';
+import { LikeButton, LikeButtonLive } from './like-button';
 import { PostActionsMenu } from './post-actions-menu';
 import { ShareModal } from './share-modal';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/lib/store';
+import { renderMentions } from '@/lib/mentions';
 
 // Matches the flat shape returned by posts.feed and posts.byId
 export interface FeedPost {
@@ -30,7 +31,7 @@ export interface FeedPost {
   }[];
 }
 
-export function PostCard({ post }: { post: FeedPost }) {
+export function PostCard({ post, useLiveCount = false }: { post: FeedPost; useLiveCount?: boolean }) {
   const [mediaIndex, setMediaIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -129,7 +130,10 @@ export function PostCard({ post }: { post: FeedPost }) {
 
       {/* Actions */}
       <div className="px-3 pt-2 pb-1 flex items-center gap-4">
-        <LikeButton postId={post.id} likedByViewer={post.likedByViewer} likeCount={post.likeCount} />
+        {useLiveCount
+          ? <LikeButtonLive postId={post.id} likedByViewer={post.likedByViewer} likeCount={post.likeCount} />
+          : <LikeButton postId={post.id} likedByViewer={post.likedByViewer} likeCount={post.likeCount} />
+        }
         <button
           onClick={() => setShowComments((v) => !v)}
           className="flex items-center gap-1.5 text-sm font-medium"
@@ -166,7 +170,7 @@ export function PostCard({ post }: { post: FeedPost }) {
           <Link href={`/${post.username}`} className="font-semibold mr-1">
             {post.username}
           </Link>
-          {post.caption}
+          {renderMentions(post.caption)}
         </div>
       )}
 

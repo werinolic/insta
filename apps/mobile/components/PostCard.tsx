@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { trpc } from '../lib/trpc';
 import { useAuthStore } from '../lib/store';
 import { MediaCarousel } from './MediaCarousel';
+import { MentionText } from './MentionText';
 
 export interface FeedPost {
   id: string;
@@ -136,7 +137,7 @@ export function PostCard({ post, onDelete }: { post: FeedPost; onDelete?: () => 
       {post.caption ? (
         <View style={styles.captionRow}>
           <Text style={styles.captionUsername}>{post.username} </Text>
-          <Text style={styles.caption}>{post.caption}</Text>
+          <MentionText text={post.caption} style={styles.caption} />
         </View>
       ) : null}
 

@@ -34,7 +34,7 @@ function PostDetail({ postId }: { postId: string }) {
 
   return (
     <div className="space-y-4">
-      <PostCard post={post} />
+      <PostCard post={post} useLiveCount />
       <div className="bg-white border border-gray-200 rounded-xl p-4">
         <h2 className="text-sm font-semibold mb-3">Comments</h2>
         <CommentList postId={postId} />

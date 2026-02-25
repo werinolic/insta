@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { trpc } from '../../lib/trpc';
 import { useAuthStore } from '../../lib/store';
 import { MediaCarousel } from '../../components/MediaCarousel';
+import { MentionText } from '../../components/MentionText';
 
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
@@ -72,7 +73,7 @@ export default function PostDetailScreen() {
       {post.caption ? (
         <View style={s.captionRow}>
           <Text style={s.captionUsername}>{post.username} </Text>
-          <Text style={s.caption}>{post.caption}</Text>
+          <MentionText text={post.caption} style={s.caption} />
         </View>
       ) : null}
 
@@ -80,7 +81,7 @@ export default function PostDetailScreen() {
       {comments.map((c) => (
         <View key={c.id} style={s.commentRow}>
           <Text style={s.commentUsername}>{c.username} </Text>
-          <Text style={s.commentText}>{c.text}</Text>
+          <MentionText text={c.text} style={s.commentText} />
           {(currentUser?.id === c.userId || currentUser?.id === post.userId) && (
             <TouchableOpacity onPress={() => deleteComment.mutate({ commentId: c.id })}>
               <Text style={s.deleteText}> ✕</Text>
