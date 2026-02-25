@@ -80,6 +80,14 @@
 - [x] `messages.subscribe` — live DM delivery in chat screen
 - [x] `notifications.subscribe` — live notification badge (WS subscription in tab layout, seeds from unreadCount)
 
+## Phase 5: Polish & Remaining Features ✅
+- [x] `auth.deleteAccount` procedure (password confirm, cascade delete)
+- [x] Delete account UI — web danger zone + mobile settings screen
+- [x] Avatar upload — web settings file picker (POST /upload)
+- [x] Avatar upload — mobile settings/profile with expo-image-picker
+- [x] Mobile image carousel — `MediaCarousel` component (FlatList + dots)
+- [x] Carousel used in PostCard (feed) + post detail screen
+
 ## Blockers
 - none
 

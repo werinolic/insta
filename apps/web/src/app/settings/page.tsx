@@ -8,18 +8,16 @@ import { Navbar } from '@/components/nav/navbar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
 function ProfileSettings() {
   const user = useAuthStore((s) => s.user);
   const setAuth = useAuthStore((s) => s.setAuth);
   const token = useAuthStore((s) => s.accessToken);
-  const [form, setForm] = useState({
-    fullName: '',
-    bio: '',
-    website: '',
-    avatarUrl: '',
-  });
+  const [form, setForm] = useState({ fullName: '', bio: '', website: '', avatarUrl: '' });
   const [profileMsg, setProfileMsg] = useState('');
   const [profileErr, setProfileErr] = useState('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -38,14 +36,31 @@ function ProfileSettings() {
       setProfileMsg('Profile updated.');
       setProfileErr('');
     },
-    onError: (e) => {
-      setProfileErr(e.message);
-      setProfileMsg('');
-    },
+    onError: (e) => { setProfileErr(e.message); setProfileMsg(''); },
   });
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  async function handleAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !token) return;
+    setAvatarUploading(true);
+    setProfileErr('');
+    try {
+      const res = await fetch(
+        `${API_URL}/upload?purpose=avatar&filename=${encodeURIComponent(file.name)}`,
+        { method: 'POST', body: file, headers: { 'Content-Type': file.type, Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = await res.json() as { url: string };
+      setForm((f) => ({ ...f, avatarUrl: url }));
+    } catch (err) {
+      setProfileErr('Avatar upload failed.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   return (
     <section className="bg-white border border-gray-200 rounded-xl p-6">
@@ -62,10 +77,23 @@ function ProfileSettings() {
         }}
         className="space-y-4"
       >
+        {/* Avatar picker */}
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+            {form.avatarUrl ? (
+              <img src={form.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-2xl">👤</div>
+            )}
+          </div>
+          <label className="cursor-pointer text-sm text-blue-500 font-semibold hover:underline">
+            {avatarUploading ? 'Uploading…' : 'Change photo'}
+            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarPick} disabled={avatarUploading} />
+          </label>
+        </div>
         <Input label="Full name" value={form.fullName} onChange={set('fullName')} />
         <Input label="Bio" value={form.bio} onChange={set('bio')} />
         <Input label="Website" type="url" value={form.website} onChange={set('website')} />
-        <Input label="Avatar URL" type="url" value={form.avatarUrl} onChange={set('avatarUrl')} />
         {profileMsg && <p className="text-sm text-green-600">{profileMsg}</p>}
         {profileErr && <p className="text-sm text-red-500">{profileErr}</p>}
         <Button type="submit" loading={update.isPending}>Save changes</Button>
@@ -175,6 +203,69 @@ function UsernameSettings() {
   );
 }
 
+function DangerZone() {
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const utils = trpc.useUtils();
+  const [password, setPassword] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [err, setErr] = useState('');
+
+  const del = trpc.auth.deleteAccount.useMutation({
+    onSuccess: () => {
+      clearAuth();
+      utils.invalidate();
+    },
+    onError: (e) => setErr(e.message),
+  });
+
+  return (
+    <section className="bg-white border border-red-200 rounded-xl p-6">
+      <h2 className="font-semibold text-red-600 mb-1">Delete account</h2>
+      <p className="text-xs text-gray-500 mb-4">
+        Permanently deletes your account and all your posts. This cannot be undone.
+      </p>
+      {!confirming ? (
+        <button
+          onClick={() => setConfirming(true)}
+          className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700"
+        >
+          Delete my account
+        </button>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setErr('');
+            del.mutate({ password });
+          }}
+          className="space-y-3"
+        >
+          <Input
+            label="Confirm your password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+          {err && <p className="text-sm text-red-500">{err}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setConfirming(false); setErr(''); }}
+              className="px-4 py-2 border border-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <Button type="submit" loading={del.isPending} className="bg-red-600 hover:bg-red-700">
+              Confirm delete
+            </Button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 function ArchivedPosts() {
   const utils = trpc.useUtils();
 
@@ -258,6 +349,7 @@ export default function SettingsPage() {
           <UsernameSettings />
           <PasswordSettings />
           <ArchivedPosts />
+          <DangerZone />
         </div>
       </main>
     </AuthGuard>

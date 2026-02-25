@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Alert, Dimensions, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { trpc } from '../lib/trpc';
 import { useAuthStore } from '../lib/store';
+import { MediaCarousel } from './MediaCarousel';
 
 export interface FeedPost {
   id: string;
@@ -17,7 +18,6 @@ export interface FeedPost {
   media: { id: string; url: string; mediumUrl: string | null; thumbnailUrl: string | null; order: number }[];
 }
 
-const { width } = Dimensions.get('window');
 
 export function PostCard({ post, onDelete }: { post: FeedPost; onDelete?: () => void }) {
   const router = useRouter();
@@ -55,7 +55,6 @@ export function PostCard({ post, onDelete }: { post: FeedPost; onDelete?: () => 
     onError: (err) => Alert.alert('Error', err.message),
   });
 
-  const imageUrl = post.media[0]?.mediumUrl ?? post.media[0]?.url;
   const isOwner = user?.id === post.userId;
 
   return (
@@ -89,12 +88,12 @@ export function PostCard({ post, onDelete }: { post: FeedPost; onDelete?: () => 
         )}
       </View>
 
-      {/* Image */}
-      {imageUrl ? (
-        <TouchableOpacity onPress={() => router.push(`/p/${post.id}`)}>
-          <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+      {/* Carousel */}
+      {post.media.length > 0 && (
+        <TouchableOpacity activeOpacity={0.95} onPress={() => router.push(`/p/${post.id}`)}>
+          <MediaCarousel media={post.media} />
         </TouchableOpacity>
-      ) : null}
+      )}
 
       {/* Actions */}
       <View style={styles.actions}>
@@ -142,7 +141,6 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { backgroundColor: '#ddd' },
   username: { fontWeight: '600', fontSize: 14 },
   dots: { fontSize: 22, paddingHorizontal: 8 },
-  image: { width, height: width },
   actions: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, gap: 12 },
   heartIcon: { fontSize: 26 },
   actionIcon: { fontSize: 26 },

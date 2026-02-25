@@ -185,6 +185,25 @@ export const authRouter = router({
       return { success: true };
     }),
 
+  deleteAccount: protectedProcedure
+    .input(z.object({ password: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [user] = await db.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      const valid = await bcrypt.compare(input.password, user.passwordHash);
+      if (!valid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect password' });
+      }
+
+      // Cascade deletes handle sessions, posts, follows, likes, comments,
+      // notifications, conversation members, messages, message reads
+      await db.delete(users).where(eq(users.id, ctx.userId));
+
+      ctx.res.clearCookie('session_id', { path: '/' });
+      return { success: true };
+    }),
+
   changeUsername: protectedProcedure
     .input(
       z.object({

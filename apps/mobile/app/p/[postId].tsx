@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { trpc } from '../../lib/trpc';
 import { useAuthStore } from '../../lib/store';
-
-const { width } = Dimensions.get('window');
+import { MediaCarousel } from '../../components/MediaCarousel';
 
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
@@ -46,7 +45,6 @@ export default function PostDetailScreen() {
 
   const isLiked = liked ?? post.likedByViewer;
   const count = likeCount ?? post.likeCount;
-  const imageUrl = post.media[0]?.mediumUrl ?? post.media[0]?.url;
   const comments = commentsData?.items ?? [];
 
   return (
@@ -61,9 +59,7 @@ export default function PostDetailScreen() {
         <Text style={s.username}>{post.username}</Text>
       </TouchableOpacity>
 
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={s.image} resizeMode="cover" />
-      ) : null}
+      {post.media.length > 0 && <MediaCarousel media={post.media} />}
 
       {/* Actions */}
       <View style={s.actions}>
@@ -117,7 +113,6 @@ const s = StyleSheet.create({
   avatar: { width: 34, height: 34, borderRadius: 17, marginRight: 10 },
   avatarPlaceholder: { backgroundColor: '#ddd' },
   username: { fontWeight: '600', fontSize: 14 },
-  image: { width, height: width },
   actions: { flexDirection: 'row', padding: 12, gap: 12 },
   icon: { fontSize: 26 },
   likeCount: { fontWeight: '600', paddingHorizontal: 12, marginBottom: 4 },
