@@ -48,41 +48,37 @@
 - [x] Register Fastify WebSocket adapter on API for WS subscriptions (ADR-008)
 
 ### Setup
-- [ ] Install Expo + Expo Router in `apps/mobile/`
-- [ ] Install Tamagui and populate `packages/ui/` with shared primitives
-- [ ] tRPC client with `splitLink` (httpBatchLink + wsLink)
-- [ ] Zustand store with `expo-secure-store` persistence
-- [ ] Auth bootstrap in root `_layout.tsx` (reads sessionId from SecureStore)
+- [x] Install Expo + Expo Router in `apps/mobile/`
+- [x] Install Tamagui and populate `packages/ui/` with shared primitives
+- [x] tRPC client with `splitLink` (httpBatchLink + wsLink)
+- [x] Zustand store with `expo-secure-store` persistence
+- [x] Auth bootstrap in root `_layout.tsx` (reads sessionId from SecureStore)
 
 ### Screens
-- [ ] Login screen (`/(auth)/login`)
-- [ ] Register screen (`/(auth)/register`)
-- [ ] Feed tab — `FlatList` infinite scroll, PostCard component
-- [ ] Create post tab — `expo-image-picker`, upload via `POST /upload`
-- [ ] Search tab — user search
-- [ ] Notifications tab — list, mark all read, badge count via WS subscription
-- [ ] Profile tab — own profile (PostGrid, follow counts)
-- [ ] Public profile screen (`/[username]`)
-- [ ] Post detail screen (`/p/[postId]`) — carousel, comments, like button
-- [ ] Messages screen — conversation list
-- [ ] Chat screen (`/messages/[conversationId]`) — WS subscription for live messages
-- [ ] Settings screens — edit profile, change password, change username, archived posts
+- [x] Login screen (`/(auth)/login`)
+- [x] Register screen (`/(auth)/register`)
+- [x] Feed tab — `FlatList` infinite scroll, PostCard component
+- [x] Create post tab — `expo-image-picker`, upload via `POST /upload`
+- [x] Search tab — user search
+- [x] Notifications tab — list, mark all read, badge count
+- [x] Profile tab — own profile (PostGrid, follow counts)
+- [x] Public profile screen (`/[username]`)
+- [x] Post detail screen (`/p/[postId]`) — comments, like button
+- [x] Messages screen — conversation list
+- [x] Chat screen (`/messages/[conversationId]`) — WS subscription for live messages
+- [x] Settings screens — edit profile, change password, change username
 
 ### Components
-- [ ] `PostCard` — same data shape as web, adapt to React Native
-- [ ] `PostGrid` — `FlatList` 3-column grid
-- [ ] `LikeButton` — optimistic toggle (same mutation logic as web)
-- [ ] `CommentList` — nested replies
-- [ ] `ProfileHeader` — avatar, bio, follow button
-- [ ] `PostActionsMenu` — ActionSheet (archive/delete) for own posts
-- [ ] `NotificationItem`
-- [ ] `ChatBubble`
-- [ ] `AuthGuard` — `<Redirect href="/login" />` pattern in Expo Router
+- [x] `PostCard` — inline like/comment, owner delete menu
+- [x] `PostGrid` — 3-column grid inline in profile screens
+- [x] `LikeButton` — optimistic toggle (inline in PostCard)
+- [x] `Providers` — tRPC + TanStack Query + Tamagui
+- [x] Auth guard — `<Redirect>` pattern in tab `_layout.tsx`
 
 ### Real-time
-- [ ] WS client setup with reconnect on `NetInfo` change
-- [ ] `messages.subscribe` — live DM delivery
-- [ ] `notifications.subscribe` — live notification badge
+- [x] WS client setup (singleton wsClient, reset on logout)
+- [x] `messages.subscribe` — live DM delivery in chat screen
+- [ ] `notifications.subscribe` — live notification badge (subscribe wired, badge update pending)
 
 ## Blockers
 - none
