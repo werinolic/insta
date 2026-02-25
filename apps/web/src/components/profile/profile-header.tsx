@@ -2,6 +2,7 @@
 
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/lib/store';
+import Link from 'next/link';
 
 interface ProfileHeaderProps {
   username: string;
@@ -67,12 +68,12 @@ export function ProfileHeader({ username }: ProfileHeaderProps) {
           <span>
             <strong>{profile.postCount}</strong> posts
           </span>
-          <span>
+          <Link href={`/${profile.username}/followers`} className="hover:underline">
             <strong>{profile.followerCount}</strong> followers
-          </span>
-          <span>
+          </Link>
+          <Link href={`/${profile.username}/following`} className="hover:underline">
             <strong>{profile.followingCount}</strong> following
-          </span>
+          </Link>
         </div>
         {profile.fullName && <p className="font-semibold text-sm">{profile.fullName}</p>}
         {profile.bio && <p className="text-sm whitespace-pre-wrap">{profile.bio}</p>}

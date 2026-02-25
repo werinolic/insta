@@ -17,7 +17,7 @@ interface Conversation {
   lastMessageText: string | null;
   lastMessageAt: Date | string | null;
   unreadCount: number;
-  members: { userId: string; username: string; avatarUrl: string | null }[];
+  members: { userId: string; username: string; avatarUrl: string | null; isAdmin: boolean }[];
 }
 
 interface Message {
@@ -167,6 +167,104 @@ function NewConversationPanel({
           <p className="text-center text-gray-500 text-sm py-6">No users found.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function GroupMembersPanel({
+  conversation,
+  onClose,
+}: {
+  conversation: Conversation;
+  onClose: () => void;
+}) {
+  const currentUser = useAuthStore((s) => s.user);
+  const [query, setQuery] = useState('');
+  const utils = trpc.useUtils();
+
+  const isAdmin = conversation.members.find((m) => m.userId === currentUser?.id)?.isAdmin ?? false;
+
+  const { data: searchResults } = trpc.users.search.useQuery(
+    { query },
+    { enabled: query.length > 0 },
+  );
+
+  const addMember = trpc.conversations.addMember.useMutation({
+    onSuccess: () => {
+      setQuery('');
+      utils.conversations.list.invalidate();
+    },
+  });
+
+  const removeMember = trpc.conversations.removeMember.useMutation({
+    onSuccess: () => utils.conversations.list.invalidate(),
+  });
+
+  const filteredResults = (searchResults ?? []).filter(
+    (u) => !conversation.members.find((m) => m.username === u.username),
+  );
+
+  return (
+    <div className="border-t border-gray-100 bg-gray-50 p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Members</span>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+      </div>
+
+      <ul className="space-y-1.5">
+        {conversation.members.map((m) => (
+          <li key={m.userId} className="flex items-center gap-2">
+            {m.avatarUrl ? (
+              <img src={m.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-500 flex-shrink-0">
+                {m.username[0].toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm flex-1 truncate">{m.username}</span>
+            {m.isAdmin && <span className="text-xs text-gray-400">admin</span>}
+            {isAdmin && m.userId !== currentUser?.id && (
+              <button
+                onClick={() => removeMember.mutate({ conversationId: conversation.id, username: m.username })}
+                disabled={removeMember.isPending}
+                className="text-red-400 hover:text-red-600 text-xs disabled:opacity-40"
+              >
+                Remove
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {isAdmin && (
+        <div className="space-y-1">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Add member…"
+            className="w-full text-xs bg-white border border-gray-200 rounded-full px-3 py-1.5 focus:outline-none"
+          />
+          {filteredResults.map((u) => (
+            <button
+              key={u.id}
+              onClick={() => addMember.mutate({ conversationId: conversation.id, username: u.username })}
+              disabled={addMember.isPending}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white text-left text-xs disabled:opacity-40"
+            >
+              {u.avatarUrl ? (
+                <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-500 flex-shrink-0">
+                  {u.username[0].toUpperCase()}
+                </div>
+              )}
+              <span className="font-medium truncate">{u.username}</span>
+              {u.fullName && <span className="text-gray-400 truncate">{u.fullName}</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -404,6 +502,11 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
 function MessagesContent() {
   const [selected, setSelected] = useState<{ id: string; title: string } | null>(null);
   const [composing, setComposing] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const { data: convList } = trpc.conversations.list.useQuery();
+  const selectedConversation = selected
+    ? ((convList ?? []) as Conversation[]).find((c) => c.id === selected.id) ?? null
+    : null;
 
   return (
     <div className="max-w-4xl mx-auto h-[calc(100vh-3.5rem)] flex border-x border-gray-200">
@@ -431,7 +534,7 @@ function MessagesContent() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <ConversationList onSelect={(id, title) => setSelected({ id, title })} />
+              <ConversationList onSelect={(id, title) => { setSelected({ id, title }); setShowMembers(false); }} />
             </div>
           </>
         )}
@@ -439,11 +542,27 @@ function MessagesContent() {
       <div className="flex-1 flex flex-col">
         {selected ? (
           <>
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="font-semibold">{selected.title}</h2>
+              {selectedConversation?.isGroup && (
+                <button
+                  onClick={() => setShowMembers((v) => !v)}
+                  title="Members"
+                  className="text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </button>
+              )}
             </div>
-            <div className="flex-1 overflow-hidden">
-              <ChatWindow conversationId={selected.id} />
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {selectedConversation?.isGroup && showMembers && (
+                <GroupMembersPanel conversation={selectedConversation} onClose={() => setShowMembers(false)} />
+              )}
+              <div className="flex-1 overflow-hidden">
+                <ChatWindow conversationId={selected.id} />
+              </div>
             </div>
           </>
         ) : (

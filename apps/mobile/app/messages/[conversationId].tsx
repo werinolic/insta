@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { trpc } from '../../lib/trpc';
@@ -17,6 +17,13 @@ interface Message {
   createdAt: string;
 }
 
+interface ConvMember {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  isAdmin: boolean;
+}
+
 export default function ChatScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const currentUser = useAuthStore((s) => s.user);
@@ -25,11 +32,33 @@ export default function ChatScreen() {
   const [imageUploading, setImageUploading] = useState(false);
   const [liveMessages, setLiveMessages] = useState<Message[]>([]);
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
+  const [memberQuery, setMemberQuery] = useState('');
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<FlatList>(null);
 
   const { data, isLoading } = trpc.messages.history.useQuery({ conversationId, limit: 50 });
   const { data: seenData } = trpc.messages.lastSeen.useQuery({ conversationId });
+  const { data: convList } = trpc.conversations.list.useQuery();
+  const conversation = (convList as Array<{ id: string; isGroup: boolean; name: string | null; members: ConvMember[] }> | undefined)?.find((c) => c.id === conversationId) ?? null;
+  const isGroup = conversation?.isGroup ?? false;
+  const members: ConvMember[] = (conversation?.members ?? []) as ConvMember[];
+  const isAdmin = members.find((m) => m.userId === currentUser?.id)?.isAdmin ?? false;
+
+  const { data: memberSearchResults } = trpc.users.search.useQuery(
+    { query: memberQuery },
+    { enabled: memberQuery.length > 0 },
+  );
+
+  const addMember = trpc.conversations.addMember.useMutation({
+    onSuccess: () => { setMemberQuery(''); utils.conversations.list.invalidate(); },
+    onError: (err) => Alert.alert('Error', err.message),
+  });
+
+  const removeMember = trpc.conversations.removeMember.useMutation({
+    onSuccess: () => utils.conversations.list.invalidate(),
+    onError: (err) => Alert.alert('Error', err.message),
+  });
 
   const sendMessage = trpc.messages.send.useMutation({
     onSuccess: () => {
@@ -97,8 +126,73 @@ export default function ChatScreen() {
 
   if (isLoading) return <View style={s.center}><ActivityIndicator /></View>;
 
+  const filteredMemberSearch = (memberSearchResults ?? []).filter(
+    (u) => !members.find((m) => m.username === u.username),
+  );
+
   return (
     <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      {/* Group member management panel */}
+      {isGroup && showMembers && (
+        <View style={s.membersPanel}>
+          <View style={s.membersPanelHeader}>
+            <Text style={s.membersPanelTitle}>Members ({members.length})</Text>
+            <TouchableOpacity onPress={() => setShowMembers(false)}>
+              <Text style={s.membersPanelClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={s.membersList} keyboardShouldPersistTaps="handled">
+            {members.map((m) => (
+              <View key={m.userId} style={s.memberRow}>
+                {m.avatarUrl ? (
+                  <Image source={{ uri: m.avatarUrl }} style={s.memberAvatar} />
+                ) : (
+                  <View style={[s.memberAvatar, s.memberAvatarPlaceholder]}>
+                    <Text style={s.memberAvatarInitial}>{m.username[0].toUpperCase()}</Text>
+                  </View>
+                )}
+                <Text style={s.memberUsername}>{m.username}</Text>
+                {m.isAdmin && <Text style={s.memberAdminBadge}>admin</Text>}
+                {isAdmin && m.userId !== currentUser?.id && (
+                  <TouchableOpacity
+                    onPress={() => removeMember.mutate({ conversationId, username: m.username })}
+                    disabled={removeMember.isPending}
+                  >
+                    <Text style={[s.removeBtn, removeMember.isPending && s.removeBtnDisabled]}>Remove</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            {isAdmin && (
+              <View style={s.addMemberSection}>
+                <TextInput
+                  style={s.addMemberInput}
+                  placeholder="Add member…"
+                  value={memberQuery}
+                  onChangeText={setMemberQuery}
+                  placeholderTextColor="#aaa"
+                />
+                {filteredMemberSearch.map((u) => (
+                  <TouchableOpacity
+                    key={u.id}
+                    style={s.searchResultRow}
+                    onPress={() => addMember.mutate({ conversationId, username: u.username })}
+                    disabled={addMember.isPending}
+                  >
+                    <Text style={s.searchResultUsername}>{u.username}</Text>
+                    {u.fullName ? <Text style={s.searchResultFullName}>{u.fullName}</Text> : null}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      )}
+      {isGroup && !showMembers && (
+        <TouchableOpacity style={s.groupBar} onPress={() => setShowMembers(true)}>
+          <Text style={s.groupBarText}>👥 {members.length} members — tap to manage</Text>
+        </TouchableOpacity>
+      )}
       <FlatList
         ref={listRef}
         data={allMessages}
@@ -182,4 +276,24 @@ const s = StyleSheet.create({
   sendBtnDisabled: { opacity: 0.4 },
   sendBtnText: { color: '#fff', fontWeight: '600' },
   seenLabel: { textAlign: 'right', fontSize: 11, color: '#aaa', marginTop: 2, marginBottom: 2, paddingHorizontal: 4 },
+  groupBar: { backgroundColor: '#f7f7f7', borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#eee', paddingVertical: 8, paddingHorizontal: 16 },
+  groupBarText: { fontSize: 13, color: '#888', textAlign: 'center' },
+  membersPanel: { maxHeight: 280, backgroundColor: '#fafafa', borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#eee' },
+  membersPanelHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 },
+  membersPanelTitle: { fontWeight: '600', fontSize: 14 },
+  membersPanelClose: { fontSize: 16, color: '#aaa', paddingHorizontal: 4 },
+  membersList: { flex: 1 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, gap: 10 },
+  memberAvatar: { width: 34, height: 34, borderRadius: 17 },
+  memberAvatarPlaceholder: { backgroundColor: '#ddd', justifyContent: 'center', alignItems: 'center' },
+  memberAvatarInitial: { fontWeight: '700', fontSize: 14, color: '#888' },
+  memberUsername: { flex: 1, fontSize: 14, fontWeight: '500' },
+  memberAdminBadge: { fontSize: 11, color: '#aaa' },
+  removeBtn: { fontSize: 13, color: '#e44' },
+  removeBtnDisabled: { opacity: 0.4 },
+  addMemberSection: { paddingHorizontal: 16, paddingBottom: 12 },
+  addMemberInput: { borderWidth: 1, borderColor: '#dbdbdb', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, fontSize: 14, marginBottom: 6 },
+  searchResultRow: { paddingVertical: 8, paddingHorizontal: 4 },
+  searchResultUsername: { fontWeight: '600', fontSize: 14 },
+  searchResultFullName: { fontSize: 13, color: '#888' },
 });

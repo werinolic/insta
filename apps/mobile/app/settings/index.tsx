@@ -5,6 +5,7 @@ const ITEMS = [
   { label: 'Edit profile', route: '/settings/profile', danger: false },
   { label: 'Change username', route: '/settings/username', danger: false },
   { label: 'Change password', route: '/settings/password', danger: false },
+  { label: 'Archived posts', route: '/settings/archived', danger: false },
   { label: 'Delete account', route: '/settings/delete-account', danger: true },
 ] as const;
 

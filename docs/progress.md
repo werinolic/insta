@@ -130,6 +130,18 @@
 - [x] Mobile photo reordering in new post screen — ‹ ✕ › controls on each thumbnail
 - [x] Notification deduplication — skip if identical notif (actor+recipient+type+post) created within 1 hour
 
+## Phase 12: Followers/Following Pages, Group Member Management & Archived Posts ✅
+- [x] Followers list page (web) — /[username]/followers, uses users.followers
+- [x] Following list page (web) — /[username]/following, uses users.following
+- [x] Profile header follower/following counts → clickable Links (web)
+- [x] Followers screen (mobile) — /[username]/followers.tsx
+- [x] Following screen (mobile) — /[username]/following.tsx
+- [x] Stat boxes tappable on public profile + own profile tab (mobile)
+- [x] Group chat member management panel (web) — members icon in chat header, shows/adds/removes members (admin only)
+- [x] Group chat member management panel (mobile) — group bar + inline members panel with add/remove (admin only)
+- [x] Archived posts screen (mobile) — /settings/archived, grid view, unarchive/delete via Alert
+- [x] "Archived posts" entry in mobile settings menu
+
 ## Blockers
 - none
 

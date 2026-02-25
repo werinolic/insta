@@ -41,16 +41,18 @@ export default function PublicProfileScreen() {
               <View style={[s.avatar, s.avatarPlaceholder]} />
             )}
             <View style={s.stats}>
-              {[
-                { label: 'Posts', val: profile.postCount },
-                { label: 'Followers', val: profile.followerCount },
-                { label: 'Following', val: profile.followingCount },
-              ].map(({ label, val }) => (
-                <View key={label} style={s.statBox}>
-                  <Text style={s.statVal}>{val}</Text>
-                  <Text style={s.statLabel}>{label}</Text>
-                </View>
-              ))}
+              <View style={s.statBox}>
+                <Text style={s.statVal}>{profile.postCount}</Text>
+                <Text style={s.statLabel}>Posts</Text>
+              </View>
+              <TouchableOpacity style={s.statBox} onPress={() => router.push(`/${username}/followers`)}>
+                <Text style={s.statVal}>{profile.followerCount}</Text>
+                <Text style={s.statLabel}>Followers</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.statBox} onPress={() => router.push(`/${username}/following`)}>
+                <Text style={s.statVal}>{profile.followingCount}</Text>
+                <Text style={s.statLabel}>Following</Text>
+              </TouchableOpacity>
             </View>
           </View>
 

@@ -53,16 +53,24 @@ export default function ProfileScreen() {
               <View style={[styles.avatar, styles.avatarPlaceholder]} />
             )}
             <View style={styles.stats}>
-              {[
-                { label: 'Posts', val: p?.postCount ?? 0 },
-                { label: 'Followers', val: p?.followerCount ?? 0 },
-                { label: 'Following', val: p?.followingCount ?? 0 },
-              ].map(({ label, val }) => (
-                <View key={label} style={styles.statBox}>
-                  <Text style={styles.statVal}>{val}</Text>
-                  <Text style={styles.statLabel}>{label}</Text>
-                </View>
-              ))}
+              <View style={styles.statBox}>
+                <Text style={styles.statVal}>{p?.postCount ?? 0}</Text>
+                <Text style={styles.statLabel}>Posts</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.statBox}
+                onPress={() => user?.username && router.push(`/${user.username}/followers`)}
+              >
+                <Text style={styles.statVal}>{p?.followerCount ?? 0}</Text>
+                <Text style={styles.statLabel}>Followers</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.statBox}
+                onPress={() => user?.username && router.push(`/${user.username}/following`)}
+              >
+                <Text style={styles.statVal}>{p?.followingCount ?? 0}</Text>
+                <Text style={styles.statLabel}>Following</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
