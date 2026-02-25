@@ -112,6 +112,13 @@
 - [x] Real-time like count on post detail (LikeButtonLive with likes.subscribeCount WS subscription)
 - [x] posts.explore API + web /explore page (Phase 7, already logged above)
 
+## Phase 9: Search, New DM & Who Liked ✅
+- [x] Web search page (/search) — live user search with avatars, links to profiles
+- [x] Search + Explore icons in web navbar
+- [x] New DM creation on web — compose button in messages sidebar opens user search → conversations.create
+- [x] Mobile "who liked" screen (/likes/[postId]) — tap like count in feed or post detail
+- [x] Like count tappable in mobile PostCard and post detail screen
+
 ## Blockers
 - none
 

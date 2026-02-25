@@ -68,7 +68,9 @@ export default function PostDetailScreen() {
           <Text style={s.icon}>{isLiked ? '❤️' : '🤍'}</Text>
         </TouchableOpacity>
       </View>
-      <Text style={s.likeCount}>{count} {count === 1 ? 'like' : 'likes'}</Text>
+      <TouchableOpacity onPress={() => { if (count > 0) router.push(`/likes/${postId}`); }}>
+        <Text style={s.likeCount}>{count} {count === 1 ? 'like' : 'likes'}</Text>
+      </TouchableOpacity>
 
       {post.caption ? (
         <View style={s.captionRow}>

@@ -132,7 +132,9 @@ export function PostCard({ post, onDelete }: { post: FeedPost; onDelete?: () => 
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.likeCount}>{likeCount} {likeCount === 1 ? 'like' : 'likes'}</Text>
+      <TouchableOpacity onPress={() => { if (likeCount > 0) router.push(`/likes/${post.id}`); }}>
+        <Text style={styles.likeCount}>{likeCount} {likeCount === 1 ? 'like' : 'likes'}</Text>
+      </TouchableOpacity>
 
       {post.caption ? (
         <View style={styles.captionRow}>
