@@ -88,6 +88,15 @@
 - [x] Mobile image carousel — `MediaCarousel` component (FlatList + dots)
 - [x] Carousel used in PostCard (feed) + post detail screen
 
+## Phase 6: Real-time & DM Sharing ✅
+- [x] Web tRPC providers: add wsLink + splitLink for WS subscriptions
+- [x] Web ChatWindow: messages.subscribe for live delivery + scroll-to-bottom
+- [x] Web ChatWindow: typing indicator (send on keypress, display "X is typing…")
+- [x] Mobile chat: typing indicator (send + receive via WS subscription)
+- [x] Post sharing via DM — web ShareModal (conversation picker)
+- [x] Post sharing via DM — mobile Alert action sheet
+- [x] post_share message type rendered in both web and mobile chat
+
 ## Blockers
 - none
 

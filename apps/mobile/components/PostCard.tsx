@@ -30,6 +30,29 @@ export function PostCard({ post, onDelete }: { post: FeedPost; onDelete?: () => 
   const liked = optimisticLike ?? post.likedByViewer;
   const likeCount = optimisticCount ?? post.likeCount;
 
+  const { data: conversations } = trpc.conversations.list.useQuery();
+
+  const sharePost = trpc.messages.send.useMutation();
+
+  function handleShare() {
+    const convos = conversations ?? [];
+    if (convos.length === 0) {
+      Alert.alert('No conversations', 'Start a conversation first.');
+      return;
+    }
+    Alert.alert(
+      'Share to…',
+      undefined,
+      [
+        ...convos.slice(0, 5).map((c) => ({
+          text: c.name ?? c.members?.find((m: { userId: string; username: string }) => m.userId !== user?.id)?.username ?? 'Chat',
+          onPress: () => sharePost.mutate({ conversationId: c.id, type: 'post_share', sharedPostId: post.id }),
+        })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ],
+    );
+  }
+
   const toggleLike = trpc.likes.toggle.useMutation({
     onMutate: () => {
       setOptimisticLike(!liked);
@@ -102,6 +125,9 @@ export function PostCard({ post, onDelete }: { post: FeedPost; onDelete?: () => 
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push(`/p/${post.id}`)}>
           <Text style={styles.actionIcon}>💬</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleShare}>
+          <Text style={styles.actionIcon}>✈️</Text>
         </TouchableOpacity>
       </View>
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { LikeButton } from './like-button';
 import { PostActionsMenu } from './post-actions-menu';
+import { ShareModal } from './share-modal';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/lib/store';
 
@@ -32,6 +33,7 @@ export interface FeedPost {
 export function PostCard({ post }: { post: FeedPost }) {
   const [mediaIndex, setMediaIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [commentText, setCommentText] = useState('');
   const user = useAuthStore((s) => s.user);
   const utils = trpc.useUtils();
@@ -140,10 +142,23 @@ export function PostCard({ post }: { post: FeedPost }) {
             />
           </svg>
         </button>
+        {/* Share to DM */}
+        <button
+          onClick={() => setShowShare(true)}
+          className="flex items-center"
+          title="Share to DM"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L15 22l-4-9-9-4 20-7z" />
+          </svg>
+        </button>
         <Link href={`/p/${post.id}`} className="ml-auto text-xs text-gray-400 hover:text-gray-600">
           View post
         </Link>
       </div>
+
+      {showShare && <ShareModal postId={post.id} onClose={() => setShowShare(false)} />}
 
       {/* Caption */}
       {post.caption && (

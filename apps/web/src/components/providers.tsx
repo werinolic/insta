@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { httpBatchLink } from '@trpc/client';
+import { httpBatchLink, splitLink, createWSClient, wsLink } from '@trpc/client';
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/lib/store';
@@ -21,25 +21,39 @@ function getQueryClient() {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const WS_URL = API_URL.replace(/^http/, 'ws');
+
+let wsClient: ReturnType<typeof createWSClient> | null = null;
+
+function getWsClient() {
+  if (typeof window === 'undefined') return null;
+  if (!wsClient) wsClient = createWSClient({ url: WS_URL });
+  return wsClient;
+}
 
 function TRPCProviderInner({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
+  const [trpcClient] = useState(() => {
+    const ws = getWsClient();
+    return trpc.createClient({
       links: [
-        httpBatchLink({
-          url: `${API_URL}/trpc`,
-          headers() {
-            const token = useAuthStore.getState().accessToken;
-            return token ? { Authorization: `Bearer ${token}` } : {};
-          },
-          fetch(url, opts) {
-            return fetch(url as string, { ...opts, credentials: 'include' });
-          },
+        splitLink({
+          condition: (op) => op.type === 'subscription',
+          true: ws ? wsLink({ client: ws }) : httpBatchLink({ url: `${API_URL}/trpc` }),
+          false: httpBatchLink({
+            url: `${API_URL}/trpc`,
+            headers() {
+              const token = useAuthStore.getState().accessToken;
+              return token ? { Authorization: `Bearer ${token}` } : {};
+            },
+            fetch(url, opts) {
+              return fetch(url as string, { ...opts, credentials: 'include' });
+            },
+          }),
         }),
       ],
-    }),
-  );
+    });
+  });
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

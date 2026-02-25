@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { trpc } from '../../lib/trpc';
@@ -8,6 +8,9 @@ interface Message {
   id: string;
   text: string | null;
   senderId: string;
+  senderUsername: string;
+  type: string;
+  isTyping?: boolean;
   createdAt: string;
 }
 
@@ -17,6 +20,8 @@ export default function ChatScreen() {
   const utils = trpc.useUtils();
   const [text, setText] = useState('');
   const [liveMessages, setLiveMessages] = useState<Message[]>([]);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<FlatList>(null);
 
   const { data, isLoading } = trpc.messages.history.useQuery({ conversationId, limit: 50 });
@@ -28,19 +33,39 @@ export default function ChatScreen() {
     },
   });
 
-  // WS subscription for live messages
+  const sendTyping = trpc.messages.typing.useMutation();
+
+  // WS subscription for live messages + typing events
   trpc.messages.subscribe.useSubscription(
     { conversationId },
     {
       onData: (msg: Message) => {
-        setLiveMessages((prev: Message[]) => [...prev, msg]);
-        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+        if (msg.isTyping) {
+          if (msg.senderId !== currentUser?.id) {
+            setTypingUser(msg.senderUsername);
+            if (typingTimeout.current) clearTimeout(typingTimeout.current);
+            typingTimeout.current = setTimeout(() => setTypingUser(null), 3000);
+          }
+        } else {
+          setLiveMessages((prev: Message[]) => [...prev, msg]);
+          setTypingUser(null);
+          setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+        }
       },
     },
   );
 
-  const historicalMessages: Message[] = data?.items as Message[] ?? [];
-  const allMessages = [...historicalMessages, ...liveMessages.filter((m) => !historicalMessages.find((h) => h.id === m.id))];
+  const handleTextChange = useCallback(
+    (val: string) => {
+      setText(val);
+      if (val) sendTyping.mutate({ conversationId });
+    },
+    [conversationId],
+  );
+
+  const historicalMessages: Message[] = (data?.items as Message[]) ?? [];
+  const liveIds = new Set(historicalMessages.map((m) => m.id));
+  const allMessages = [...historicalMessages, ...liveMessages.filter((m) => !liveIds.has(m.id))];
 
   if (isLoading) return <View style={s.center}><ActivityIndicator /></View>;
 
@@ -55,10 +80,21 @@ export default function ChatScreen() {
           const isMine = msg.senderId === currentUser?.id;
           return (
             <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs]}>
-              <Text style={[s.bubbleText, isMine && s.bubbleTextMine]}>{msg.text ?? ''}</Text>
+              {msg.type === 'post_share' ? (
+                <Text style={[s.bubbleText, isMine && s.bubbleTextMine, s.italic]}>📷 Shared a post</Text>
+              ) : (
+                <Text style={[s.bubbleText, isMine && s.bubbleTextMine]}>{msg.text ?? ''}</Text>
+              )}
             </View>
           );
         }}
+        ListFooterComponent={
+          typingUser ? (
+            <View style={[s.bubble, s.bubbleTheirs, { marginTop: 4 }]}>
+              <Text style={[s.bubbleText, s.italic]}>{typingUser} is typing…</Text>
+            </View>
+          ) : null
+        }
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
       />
 
@@ -67,11 +103,11 @@ export default function ChatScreen() {
           style={s.input}
           placeholder="Message…"
           value={text}
-          onChangeText={setText}
+          onChangeText={handleTextChange}
           multiline
         />
         <TouchableOpacity
-          style={s.sendBtn}
+          style={[s.sendBtn, (!text.trim() || sendMessage.isPending) && s.sendBtnDisabled]}
           onPress={() => {
             if (text.trim()) sendMessage.mutate({ conversationId, text: text.trim() });
           }}
@@ -93,8 +129,10 @@ const s = StyleSheet.create({
   bubbleTheirs: { backgroundColor: '#f0f0f0', alignSelf: 'flex-start' },
   bubbleText: { fontSize: 15, color: '#000' },
   bubbleTextMine: { color: '#fff' },
+  italic: { fontStyle: 'italic' },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', padding: 12, borderTopWidth: StyleSheet.hairlineWidth, borderColor: '#eee' },
   input: { flex: 1, borderWidth: 1, borderColor: '#dbdbdb', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, fontSize: 15, maxHeight: 100 },
   sendBtn: { marginLeft: 8, backgroundColor: '#0095f6', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
+  sendBtnDisabled: { opacity: 0.4 },
   sendBtnText: { color: '#fff', fontWeight: '600' },
 });

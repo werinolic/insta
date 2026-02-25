@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuthStore } from '@/lib/store';
 import { AuthGuard } from '@/components/auth/auth-guard';
@@ -18,6 +18,17 @@ interface Conversation {
   members: { userId: string; username: string; avatarUrl: string | null }[];
 }
 
+interface Message {
+  id: string;
+  text: string | null;
+  senderId: string;
+  senderUsername: string;
+  type: string;
+  sharedPostId: string | null;
+  createdAt: string;
+  isTyping?: boolean;
+}
+
 function ConversationList({ onSelect }: { onSelect: (id: string, title: string) => void }) {
   const currentUser = useAuthStore((s) => s.user);
   const { data, isLoading } = trpc.conversations.list.useQuery();
@@ -33,7 +44,6 @@ function ConversationList({ onSelect }: { onSelect: (id: string, title: string) 
   return (
     <div className="divide-y divide-gray-100">
       {convos.map((c) => {
-        // For DMs, show the other person's name
         const title = c.isGroup
           ? (c.name ?? 'Group chat')
           : (c.members.find((m) => m.userId !== currentUser?.id)?.username ?? 'Unknown');
@@ -68,6 +78,10 @@ function ConversationList({ onSelect }: { onSelect: (id: string, title: string) 
 function ChatWindow({ conversationId }: { conversationId: string }) {
   const currentUser = useAuthStore((s) => s.user);
   const [text, setText] = useState('');
+  const [liveMessages, setLiveMessages] = useState<Message[]>([]);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
   const { data, isLoading } = trpc.messages.history.useQuery({ conversationId, limit: 50 });
@@ -79,14 +93,50 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
     },
   });
 
+  const sendTyping = trpc.messages.typing.useMutation();
+
+  // Live messages + typing events via WS subscription
+  trpc.messages.subscribe.useSubscription(
+    { conversationId },
+    {
+      onData: (msg: Message) => {
+        if (msg.isTyping) {
+          if (msg.senderId !== currentUser?.id) {
+            setTypingUser(msg.senderUsername);
+            if (typingTimeout.current) clearTimeout(typingTimeout.current);
+            typingTimeout.current = setTimeout(() => setTypingUser(null), 3000);
+          }
+        } else {
+          setLiveMessages((prev) => [...prev, msg]);
+          setTypingUser(null);
+        }
+      },
+    },
+  );
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [liveMessages, data]);
+
+  const handleTextChange = useCallback(
+    (val: string) => {
+      setText(val);
+      if (val) sendTyping.mutate({ conversationId });
+    },
+    [conversationId],
+  );
+
   if (isLoading) return <div className="flex justify-center py-8"><Spinner /></div>;
 
-  const messages = data?.items ?? [];
+  const historical = (data?.items ?? []) as Message[];
+  const liveIds = new Set(historical.map((m) => m.id));
+  const allMessages = [...historical, ...liveMessages.filter((m) => !liveIds.has(m.id))];
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map((m) => {
+        {allMessages.map((m) => {
           const isOwn = m.senderId === currentUser?.id;
           return (
             <div key={m.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
@@ -97,12 +147,26 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
                     : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                 }`}
               >
-                {m.text}
+                {m.type === 'post_share' ? (
+                  <span className="italic text-xs opacity-80">📷 Shared a post</span>
+                ) : (
+                  m.text
+                )}
               </div>
             </div>
           );
         })}
+
+        {typingUser && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 text-gray-500 text-xs px-3 py-2 rounded-2xl rounded-bl-sm">
+              {typingUser} is typing…
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
       </div>
+
       <div className="border-t border-gray-200 p-3">
         <form
           onSubmit={(e) => {
@@ -114,7 +178,7 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
         >
           <input
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Message…"
             className="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-full focus:outline-none focus:border-gray-400"
           />
