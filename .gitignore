@@ -12,3 +12,6 @@ dist/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Tauri build output
+apps/desktop/src-tauri/target/
