@@ -68,10 +68,11 @@ jobs:
             platform: macos
             name: macos-silicon
             args: --target aarch64-apple-darwin
-          - os: macos-13
-            platform: macos
-            name: macos-intel
-            args: --target x86_64-apple-darwin
+          # macos-intel disabled — macos-13 runner not available on free plan
+          # - os: macos-13
+          #   platform: macos
+          #   name: macos-intel
+          #   args: --target x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
 
     steps:
