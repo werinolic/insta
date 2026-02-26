@@ -142,8 +142,54 @@
 - [x] Archived posts screen (mobile) — /settings/archived, grid view, unarchive/delete via Alert
 - [x] "Archived posts" entry in mobile settings menu
 
+## Phase 13: Desktop (Tauri v2)
+
+> Spec: `docs/specs/features/desktop.spec.md`
+> ADR: `docs/decisions/009-desktop-framework.md`
+
+### Pre-work
+- [x] Add `apps/desktop/` to pnpm workspace and Turborepo pipeline
+- [x] Scaffold Tauri v2 project with React + Vite renderer (hand-written, not from CLI)
+- [x] Register Tauri plugins: store, notification, dialog, fs, shell, updater, process, window-state, tray
+
+### Setup
+- [x] tRPC client with `splitLink` (httpBatchLink + wsLink) — mirrors web setup
+- [x] Zustand store with `@tauri-apps/plugin-store` persistence (accessToken + sessionId)
+- [x] Auth bootstrap in `App.tsx` (reads sessionId → calls `auth.refreshMobile` on launch)
+- [x] `tauri.conf.json` — capability allowlist, window defaults, app metadata
+- [x] `src-tauri/capabilities/default.json` — Tauri v2 capability file
+
+### Pages (React + Vite renderer)
+- [x] Login page
+- [x] Register page
+- [x] Feed page — infinite scroll, PostCard component
+- [x] Create post — native file dialog (`FilePickerButton`) + upload flow
+- [x] Explore page — 3-col thumbnail grid, infinite scroll
+- [x] Post detail page — comments, like button, real-time like count (WS)
+- [x] Profile page — post grid, follow/unfollow, follower/following counts → navigate
+- [x] Followers / Following pages
+- [x] Search page — live user search
+- [x] Messages page — conversation list + ChatWindow with WS subscription, group member management
+- [x] Notifications page — list, mark all read
+- [x] Settings page — edit profile, change username/password, delete account, archive
+
+### Desktop-native features
+- [x] `NotifDispatcher` — SSE notifications → `@tauri-apps/plugin-notification` (when app not focused)
+- [x] `TrayManager` — system tray icon with tooltip badge, tray menu (Open / Quit)
+- [x] `FilePickerButton` — wraps `@tauri-apps/plugin-dialog` open() + `@tauri-apps/plugin-fs` readFile for uploads
+- [x] `UpdatePrompt` — `@tauri-apps/plugin-updater` check on launch + every 4 h, restart toast
+- [x] Window state restore — `@tauri-apps/plugin-window-state`
+- [x] External links open in default browser via `@tauri-apps/plugin-shell`
+- [x] Hide to tray on window close (re-open from tray click)
+- [x] `Sidebar` — desktop-native sidebar nav replaces top navbar
+
+### CI / Distribution
+- [ ] GitHub Actions matrix (ubuntu / windows / macos) with `tauri-action`
+- [ ] Update manifest hosted on GitHub Releases
+- [ ] `pnpm tauri build` wired into Turborepo `build` pipeline
+
 ## Blockers
 - none
 
 ## Decisions
-- see `docs/decisions/` (ADR-001 through ADR-008)
+- see `docs/decisions/` (ADR-001 through ADR-009)

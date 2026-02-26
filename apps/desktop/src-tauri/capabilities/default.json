@@ -1,0 +1,32 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema/acl/capabilities/schemas/capability.schema.json",
+  "identifier": "default",
+  "description": "Capability file for Insta Desktop — grants only the permissions the app actually uses.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-is-focused",
+    "core:tray:default",
+    "store:default",
+    "notification:default",
+    "notification:allow-send-notification",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "dialog:default",
+    "dialog:allow-open",
+    "fs:default",
+    "fs:allow-read-file",
+    "shell:default",
+    "shell:allow-open",
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "process:default",
+    "process:allow-relaunch",
+    "window-state:default"
+  ]
+}
