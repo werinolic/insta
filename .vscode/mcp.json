@@ -29,7 +29,7 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
-        "GITHUB_TOKEN": "***REDACTED***"
+        "GITHUB_TOKEN": "${env:GITHUB_TOKEN}"
       }
     },
     "postgres": {
