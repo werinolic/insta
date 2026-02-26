@@ -96,8 +96,6 @@ jobs:
       # ── Rust ─────────────────────────────────────────────────────────────
       - name: Setup Rust (stable)
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.args != '' && matrix.args || '' }}
 
       - name: Add Rust target
         if: matrix.args != ''
