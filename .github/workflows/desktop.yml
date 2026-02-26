@@ -1,7 +1,7 @@
 name: Desktop CI
 
 # Triggers:
-#   • Every push / PR that touches apps/desktop/ or this file
+#   • Every push / PR that touches apps/desktop/, pnpm-lock.yaml, or this file
 #   • Version tags:  desktop-v1.2.3  → creates a GitHub Release
 #   • Manual run via Actions UI
 on:
@@ -9,6 +9,7 @@ on:
     branches: [main, master]
     paths:
       - 'apps/desktop/**'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/desktop.yml'
     tags:
       - 'desktop-v[0-9]+.[0-9]+.[0-9]+'
@@ -16,6 +17,7 @@ on:
     branches: [main, master]
     paths:
       - 'apps/desktop/**'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/desktop.yml'
   workflow_dispatch:
 
