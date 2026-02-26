@@ -184,9 +184,13 @@
 - [x] `Sidebar` — desktop-native sidebar nav replaces top navbar
 
 ### CI / Distribution
-- [ ] GitHub Actions matrix (ubuntu / windows / macos) with `tauri-action`
-- [ ] Update manifest hosted on GitHub Releases
-- [ ] `pnpm tauri build` wired into Turborepo `build` pipeline
+- [x] GitHub Actions matrix (ubuntu-22.04 / windows-latest / macos-latest) with `tauri-action`
+- [x] Separate `typecheck` job (runs once, gates the matrix)
+- [x] Rust cache per platform (`swatinem/rust-cache`)
+- [x] Artifacts uploaded for every run (`actions/upload-artifact`)
+- [x] Release draft created on `desktop-v*.*.*` tag push
+- [x] Updater signing via `TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets
+- [ ] `pnpm tauri build` wired into Turborepo `build` pipeline (optional — CI is sufficient)
 
 ## Blockers
 - none
