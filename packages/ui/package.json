@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "tamagui": "*"
+    "tamagui": ">=0.0.0-0"
   }
 }
