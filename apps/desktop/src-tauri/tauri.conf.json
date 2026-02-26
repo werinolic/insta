@@ -38,7 +38,9 @@
       "icons/icon.ico"
     ],
     "publisher": "Insta",
-    "copyright": "© 2026 Insta",
+    "copyright": "© 2026 Insta"
+  },
+  "plugins": {
     "updater": {
       "active": true,
       "endpoints": [
